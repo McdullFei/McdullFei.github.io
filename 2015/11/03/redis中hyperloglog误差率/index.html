@@ -4,16 +4,13 @@
 <head>
   <meta charset="UTF-8">
   
-    <title>linux中找到最耗CPU的那段Java代码 | Renfei&#39;s blog</title>
+    <title>redis中hyperloglog误差率 | Renfei&#39;s blog</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
     
     <meta name="author" content="Renfei.Monster">
     
-    <meta name="description" content="linux中找到最耗CPU的那段Java代码
-sun JDK环境下最耗CPU性能的java代码段的方法。基本上原理就是使用top命令查看最耗cpu的进程和线程（子进程）。使用jstack把java线程堆栈给dump下来。然后，在堆栈信息中查找出对应的代码块。
-
-
-使用top查找出最耗cpu的进程号（">
+    <meta name="description" content="&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;最近发现项目中用的hyperloglog进行去重时，随着hyperloglog存储的数据越来越多，误差率会越来越大。
+&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;hyperloglog是根据bloom filter算法设计出来的存储结构，bloom">
     
     
     
@@ -75,15 +72,15 @@ sun JDK环境下最耗CPU性能的java代码段的方法。基本上原理就是
 		<header class="article-info clearfix">
   <h1 itemprop="name">
     
-      <a href="/2015/11/03/linux中找到最耗CPU的那段Java代码/" title="linux中找到最耗CPU的那段Java代码" itemprop="url">linux中找到最耗CPU的那段Java代码</a>
+      <a href="/2015/11/03/redis中hyperloglog误差率/" title="redis中hyperloglog误差率" itemprop="url">redis中hyperloglog误差率</a>
   </h1>
   <p class="article-author">By
     
       <a href="https://plus.google.com/109281524060750090000?rel=author" title="Renfei.Monster" target="_blank" itemprop="author">Renfei.Monster</a>
     </p>
   <p class="article-time">
-    <time datetime="2015-11-03T07:12:23.000Z" itemprop="datePublished">2015-11-03</time>
-    更新日期:<time datetime="2015-11-03T07:34:56.000Z" itemprop="dateModified">2015-11-03</time>
+    <time datetime="2015-11-03T07:41:57.000Z" itemprop="datePublished">2015-11-03</time>
+    更新日期:<time datetime="2015-11-03T07:45:34.000Z" itemprop="dateModified">2015-11-03</time>
     
   </p>
 </header>
@@ -92,26 +89,18 @@ sun JDK环境下最耗CPU性能的java代码段的方法。基本上原理就是
 		
 		<div id="toc" class="toc-article">
 			<strong class="toc-title">文章目录</strong>
-		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#linux中找到最耗CPU的那段Java代码"><span class="toc-number">1.</span> <span class="toc-text">linux中找到最耗CPU的那段Java代码</span></a></li></ol>
+		
 		</div>
 		
-		<h2 id="linux中找到最耗CPU的那段Java代码">linux中找到最耗CPU的那段Java代码</h2><blockquote>
-<p><strong>sun JDK环境下最耗CPU性能的java代码段的方法。基本上原理就是使用top命令查看最耗cpu的进程和线程（子进程）。使用jstack把java线程堆栈给dump下来。然后，在堆栈信息中查找出对应的代码块。</strong></p>
+		<blockquote>
+<p>&nbsp;&nbsp;&nbsp;&nbsp;最近发现项目中用的hyperloglog进行去重时，随着hyperloglog存储的数据越来越多，误差率会越来越大。</p>
+<p>&nbsp;&nbsp;&nbsp;&nbsp;hyperloglog是根据bloom filter算法设计出来的存储结构，bloom<br>filter介绍如下： <a href="http://blog.csdn.net/jiaomeng/article/details/1495500" target="_blank" rel="external">http://blog.csdn.net/jiaomeng/article/details/1495500</a><br>&nbsp;&nbsp;&nbsp;&nbsp;bloom<br>filter允许一定的误差率(在判断一个元素是否属于某个集合时，有可能会把不属于这个集合的元素误认为属于这个集合)</p>
 </blockquote>
-<ul>
-<li>使用top查找出最耗cpu的进程号（PID）<br><img src="http://static.oschina.net/uploads/img/201406/25092704_iwmV.png" alt="使用top查找出最耗cpu的进程号"></li>
-</ul>
-<p>  可以按shift+p来按cpu排序。</p>
-<ul>
-<li>使用jstack dump对应PID的堆栈信息保存备查 <strong>jstack 17315 &gt; jstack.out</strong><br><img src="http://static.oschina.net/uploads/img/201406/25092705_bv0g.png" alt="jstack栈信息"><br>几个比较有用的信息包括 线程名称、nid（native id， 一会儿会用到）、线程状态</li>
-<li>再次使用top查出对应PID中最耗cpu的子进程（java线程）<strong>top -p 17315 -H</strong></li>
-</ul>
-<p><img src="http://static.oschina.net/uploads/img/201406/25092706_kc15.png" alt="17315子进程"></p>
-<p>top命令使用-p参数来指定进程号，-H参数来显示线程。这里可以看到最耗cpu的进程（java中的线程）是17316</p>
-<ul>
-<li>从dump下来的堆栈信息中查找耗费性能的代码块。dump下来的nid是十六进制的，而top查看的是10进制的，这里需要将10进制转化为16进制，并在jstack中查找。printf ％0x 17316，这里得到43a4。<br><img src="http://static.oschina.net/uploads/img/201406/25092707_yZMh.png" alt="此处输入图片的描述"></li>
-</ul>
-<p>基本就是这样一个步骤</p>
+<p><img src="http://img2026.static.suishenyun.net/c4f9a5c6c0bf448eb1c1b955b436f2d1/62788c3d307b84101663a6923f795f8d.png!w480.jpg" alt="此处输入图片的描述"></p>
+<p><img src="http://img2026.static.suishenyun.net/c4f9a5c6c0bf448eb1c1b955b436f2d1/f8fe59964981c35882ddc6e1323baa6a.png!w480.jpg" alt="此处输入图片的描述"></p>
+<hr>
+<p>&nbsp;&nbsp;&nbsp;&nbsp;上面数据对比说明1973535这条数据在hyperloglog中是存在的，但是在同步操作的历史数据表中却没有，也就是说，本来不存在于hyperloglog中的1973535数据被判断为存在于hyperloglog了。</p>
+<p>&nbsp;&nbsp;&nbsp;&nbsp;感觉redis中hyperloglog误差率还是挺大的。。。。</p>
   
 	</div>
 		<footer class="article-footer clearfix">
@@ -121,7 +110,7 @@ sun JDK环境下最耗CPU性能的java代码段的方法。基本上原理就是
 
 <div class="article-share" id="share">
 
-  <div data-url="http://mcdullfei.github.io/2015/11/03/linux中找到最耗CPU的那段Java代码/" data-title="linux中找到最耗CPU的那段Java代码 | Renfei&#39;s blog" data-tsina="1809365984" class="share clearfix">
+  <div data-url="http://mcdullfei.github.io/2015/11/03/redis中hyperloglog误差率/" data-title="redis中hyperloglog误差率 | Renfei&#39;s blog" data-tsina="1809365984" class="share clearfix">
   </div>
 
 </div>
@@ -130,19 +119,11 @@ sun JDK环境下最耗CPU性能的java代码段的方法。基本上原理就是
 	
 <nav class="article-nav clearfix">
  
- <div class="prev" >
- <a href="/2015/11/03/redis中hyperloglog误差率/" title="redis中hyperloglog误差率">
-  <strong>PREVIOUS:</strong><br/>
-  <span>
-  redis中hyperloglog误差率</span>
-</a>
-</div>
-
 
 <div class="next">
-<a href="/2015/10/27/java三目运算符的坑/"  title="java三目运算符的坑">
+<a href="/2015/11/03/linux中找到最耗CPU的那段Java代码/"  title="linux中找到最耗CPU的那段Java代码">
  <strong>NEXT:</strong><br/> 
- <span>java三目运算符的坑
+ <span>linux中找到最耗CPU的那段Java代码
 </span>
 </a>
 </div>
@@ -159,7 +140,7 @@ sun JDK环境下最耗CPU性能的java代码段的方法。基本上原理就是
 
   <div id="toc" class="toc-aside">
   <strong class="toc-title">文章目录</strong>
-  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#linux中找到最耗CPU的那段Java代码"><span class="toc-number">1.</span> <span class="toc-text">linux中找到最耗CPU的那段Java代码</span></a></li></ol>
+  
   </div>
 
 <div id="asidepart">
