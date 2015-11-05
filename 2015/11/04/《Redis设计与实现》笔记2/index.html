@@ -9,6 +9,11 @@
     
     <meta name="author" content="Renfei.Monster">
     
+    <meta name="description" content="单机数据库实现
+Redis服务器创建时，会默认创建16个数据库。
+默认情况下redis客户端的默认数据库为0号库（redis-cli默认进去的那个），其中可以用select 数据库编号，进行切换。select 1。
+但问题是，redis至今为止仍然没有返回客户端目标数据库的命令，也就是说如果你用其他">
+    
     
     
     
@@ -79,7 +84,7 @@
     </p>
   <p class="article-time">
     <time datetime="2015-11-04T09:38:08.000Z" itemprop="datePublished">2015-11-04</time>
-    更新日期:<time datetime="2015-11-04T09:38:08.000Z" itemprop="dateModified">2015-11-04</time>
+    更新日期:<time datetime="2015-11-05T03:56:47.000Z" itemprop="dateModified">2015-11-05</time>
     
   </p>
 </header>
@@ -88,10 +93,62 @@
 		
 		<div id="toc" class="toc-article">
 			<strong class="toc-title">文章目录</strong>
-		
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#单机数据库实现"><span class="toc-number">1.</span> <span class="toc-text">单机数据库实现</span></a></li></ol>
 		</div>
 		
-		  
+		<h2 id="单机数据库实现"><strong>单机数据库实现</strong></h2><ol>
+<li>Redis服务器创建时，会默认创建16个数据库。</li>
+<li>默认情况下redis客户端的默认数据库为0号库（redis-cli默认进去的那个），其中可以用select 数据库编号，进行切换。select 1。</li>
+<li>但问题是，redis至今为止仍然没有返回客户端目标数据库的命令，也就是说如果你用其他语言客户端执行redis命令，该客户端时没有像redis-cli那样显示出目标数据库的编号的（比如你使用jedis第三方插件），所以现在使用redis时不会有跨库操作。</li>
+<li>redis是一个键值对的数据库服务器，他的键空间维护着键字典和expires字典（失效字典是记录设置了失效时间的key字典）</li>
+<li>INFO stats可以看程序中使用键的命中情况</li>
+<li>对于键的生存时间和失效时间的管理</li>
+</ol>
+<blockquote>
+<ul>
+<li>expire、expireat、pexpire、pexpireat四个命令可以设计key的过期时间，四个命令分别代表：以秒为单位设置过期时间、以秒为单位设置过期时间点（unix时间戳）、以毫秒为单位设置过期时间、以毫秒为单位设置过期时间点（unix时间戳）。</li>
+<li>setex的string类型命令可以在设置一个字符串键的同时设置过期时间。</li>
+<li>过期时间的底层设计原理：实际上expire、expireat、pexpire三个命令都是使用pexpireat来实现的，pexpireat是unix时间戳，说白了过期时间在服务器保存就是时间戳而已，后面的ttl、pttl命令只不过是当前时间戳－设置的过期时间戳计算出来的。</li>
+</ul>
+</blockquote>
+<ol>
+<li>过期键删除策略：</li>
+</ol>
+<blockquote>
+<ul>
+<li>在程序设计时比较常用的删除策略：<ul>
+<li>定时删除（即在创建key时附带创建一个定时器，用定时器来执行删除操作）、</li>
+<li>惰性删除（放任key不管，在key使用时检查生存时间并决定是否执行删除操作）、</li>
+<li>定期删除（单独进程每隔一段时间检查key，决定是否删除）</li>
+</ul>
+</li>
+<li>以上三种的优缺点：<ul>
+<li>定时删除：对内存最友好的，但是每个key增加一个定时器，在服务器执行上会对cpu带来很大压力，是对cpu最不友好的。</li>
+<li>惰性删除：对cpu最友好的，但是对于内存最不友好，因为key的删除只有在被用到时才会去判断有效时间，而大量不用的key就会常驻内存得不到回收，这对于redis这种内存型数据库是极大的资源浪费。</li>
+<li>定期删除：定期删除可以说是上面两种方式的折中，说白了如果执行频率过快，它也就是定时删除，如果执行的少，执行时间短也就是惰性删除。</li>
+<li>思考：cpu和内存在程序设计时总会存在互斥的情况，要想优先cpu往往就会牺牲内存，如果想优先内存往往会牺牲掉cpu，所以程序设计就会找一个平衡点，做出取舍。redis对于过期key的操作就采用定期删除＋惰性删除的方式做了折中。其实在我们的redis业务层如果想删除不用的key也是做定期删除＋惰性删除两种结合的方式。</li>
+</ul>
+</li>
+<li>redis的删除策略（redis结合了惰性删除和定期删除两种方式来进行删除）具体实现：<ul>
+<li>在每次使用key时进行惰性删除策略，执行一个key的属性会在执行前优先执行expireIfNeeded函数，此函数就是用来判断key是否过期，如果过期，将不执行实际key操作，而是在这一步直接删除掉key。<br><strong>需要注意</strong>：redis服务器做主、从处理时，如果使用key获取value命令，比如get，这是expireIfNeeded做过期判断时只会在主服务器有效，而从服务器会直接返回get的值而不会进行del操作。因为主、从部署时，同步是以主服务器为标准的。</li>
+<li>定期删除策略的执行：犹豫redis的key比较多，所以redis设计为随机检查的方式来执行，redis服务器周期性的执行activeExpireCycle函数，此函数在规定时间内，分多次遍历服务器中的数据库，从数据库的expire字典（过期字典）中随机检查一部分键来执行过期删除操作。这种方式很取巧，但也很有效，试想过期字典在每次执行过期检查时都删除一部分过期键，那么随机的命中概率会逐渐增大，而不需要浪费cpu遍历过期字典中的所有键。</li>
+<li>定期删除虽然对过期字典是随机遍历的，但是对于数据库是全部执行的，current_db全局变量纪录了，activeExpireCycle正在执行的数据库编号。</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<ol>
+<li>RDB持久化</li>
+</ol>
+<blockquote>
+<ul>
+<li>对于RDB，save命令会阻塞其他命令，所以save要慎用或者不用（redis是单线程的，一个命令执行其他命令都在等待状态），bgsave不会阻塞其他命令，因为他单独开了一个线程处理</li>
+<li>redis允许用户通过配置服务器的save选项让服务器每隔一段时间来执行一次bgsave命令。</li>
+<li>rdb的载入工作会在服务器启动时自动执行。</li>
+<li>如果服务器开启了aof持久化功能那么服务器会优先选择AOF文件来还原数据库。</li>
+</ul>
+</blockquote>
+  
 	</div>
 		<footer class="article-footer clearfix">
 
@@ -130,7 +187,7 @@
 
   <div id="toc" class="toc-aside">
   <strong class="toc-title">文章目录</strong>
-  
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#单机数据库实现"><span class="toc-number">1.</span> <span class="toc-text">单机数据库实现</span></a></li></ol>
   </div>
 
 <div id="asidepart">
