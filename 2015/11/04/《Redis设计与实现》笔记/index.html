@@ -82,7 +82,7 @@
     </p>
   <p class="article-time">
     <time datetime="2015-11-04T02:19:01.000Z" itemprop="datePublished">2015-11-04</time>
-    更新日期:<time datetime="2015-11-04T03:52:42.000Z" itemprop="dateModified">2015-11-04</time>
+    更新日期:<time datetime="2015-11-05T02:36:13.000Z" itemprop="dateModified">2015-11-05</time>
     
   </p>
 </header>
@@ -134,6 +134,19 @@
 </ul>
 </blockquote>
 <p>这就使我们在做redis设计时，存放的value尽量简单到整数值，这样不止节省redis的内存（比如存放id就要比存放xxx.id这种字符串省），在redis底层对比对象时复杂度也更低，更加节省了cpu消耗。</p>
+<p>redis对象空转时常的设计：</p>
+<blockquote>
+<ul>
+<li>空转时长说白了就是存储对象的空闲时间，redis为了更好的管理内存，在redisObject的lru属性中记录了存储对象最后一次被访问的时间，用OBJECT IDLETIME（OBJECT ENCODING 命令：value的编码、OBJECT REFCOUNT 命令：存值次数）命令就可以打印出key的空闲时间（当前时间－lru）。</li>
+<li>空转时长的作用就是有效管理内存，在redis配置中如果打开了maxmemory选项并且服务器回收算法为：volatile-lru或者是allkeys-lru那么当服务器内存超过maxmemory时，空转时长最大的就会被优先回收、释放。 </li>
+</ul>
+</blockquote>
+<p>redis类型和value编码方式：前面介绍过string的两种编码，其实每种结构，value的存储至少有两种以上编码，对于hash、集合、有序集合和列表都有一种zip压缩编码还有一种普通编码，有效的利用zip编码会大大节省内存。</p>
+<blockquote>
+<ul>
+<li>redis共有字符串、列表、哈希、集合和有序集合5中类型对象，每种类型对象至少都有两种或以上的编码方式，不同的编码方式可以在不同的使用场景上优化使用效率。</li>
+</ul>
+</blockquote>
   
 	</div>
 		<footer class="article-footer clearfix">
