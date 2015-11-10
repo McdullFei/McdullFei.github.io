@@ -4,13 +4,12 @@
 <head>
   <meta charset="UTF-8">
   
-    <title>MySQL、Redis量化分析，优化实践的一些总结 | Renfei&#39;s blog</title>
+    <title>《Redis设计与实现》笔记-附录RDB文件详解 | Renfei&#39;s blog</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
     
     <meta name="author" content="Renfei.Monster">
     
-    <meta name="description" content="##关于MySQL、Redis量化分析，优化实践的一些总结
-数据量化分析，之前我们主要做了两方面内容：一是分析找出现有系统中redis、mysql的数据热点、性能瓶颈，进而进行针对性的优化；二是根据现有数据量，结合数据的增长情况预估未来3个月、半年的mysql数据量，redis内存使用情况，为扩容做">
+    <meta name="description" content="#打个标记后面补上">
     
     
     
@@ -74,15 +73,15 @@
 		<header class="article-info clearfix">
   <h1 itemprop="name">
     
-      <a href="/2015/11/10/MySQL、Redis量化分析，优化实践的一些总结/" title="MySQL、Redis量化分析，优化实践的一些总结" itemprop="url">MySQL、Redis量化分析，优化实践的一些总结</a>
+      <a href="/2015/11/10/《Redis设计与实现》笔记-附录RDB文件详解/" title="《Redis设计与实现》笔记-附录RDB文件详解" itemprop="url">《Redis设计与实现》笔记-附录RDB文件详解</a>
   </h1>
   <p class="article-author">By
     
       <a href="https://plus.google.com/109281524060750090000?rel=author" title="Renfei.Monster" target="_blank" itemprop="author">Renfei.Monster</a>
     </p>
   <p class="article-time">
-    <time datetime="2015-11-10T02:23:53.000Z" itemprop="datePublished">2015-11-10</time>
-    更新日期:<time datetime="2015-11-10T02:32:36.000Z" itemprop="dateModified">2015-11-10</time>
+    <time datetime="2015-11-10T03:45:18.000Z" itemprop="datePublished">2015-11-10</time>
+    更新日期:<time datetime="2015-11-10T03:46:22.000Z" itemprop="dateModified">2015-11-10</time>
     
   </p>
 </header>
@@ -94,38 +93,7 @@
 		
 		</div>
 		
-		<p>##关于MySQL、Redis量化分析，优化实践的一些总结</p>
-<p>数据量化分析，之前我们主要做了两方面内容：<br>一是分析找出现有系统中redis、mysql的数据热点、性能瓶颈，进而进行针对性的优化；<br>二是根据现有数据量，结合数据的增长情况预估未来3个月、半年的mysql数据量，redis内存使用情况，为扩容做准备；</p>
-<p>下面分别针对redis和mysql对这两方面做一些简单介绍：</p>
-<p>###一、<a href="http://redis.io/" target="_blank" rel="external">Redis</a></p>
-<p>####1、对于redis的分析优化：</p>
-<p>#####（1）、通过 <a href="https://redis.readthedocs.org/en/latest/server/slowlog.html" target="_blank" rel="external">SLOWLOG</a> </p>
-<p>SLOWLOG get命令查看Redis的慢日志，找出执行耗时的命令，进而针对性分析优化；具体的优化方法，比如：<br>结合业务，分析是否是代码中对于redis的使用方式不对，是否可以选择更合适的数据结构；<br>使用hmget、hmset这样的批量操作命令；<br>使用pipline管道，批量发送命令；<br>使用lua脚本，在服务端处理你的业务逻辑，而不必将数据取回客户端处理后再请求客户端。peacock的统计和万年历acctk校验都用到了一些lua脚本，大家可以看看；</p>
-<p>#####（2）、使用 redis-rdb-tools</p>
-<p>redis-rdb-tools这个工具可以分析redis中所有key占用内存的详细情况， 找出内存占用最多的key优化，同时还可以找出已经过期的没用的key进行清理，释放内存；<br>redis-rdb-tools 是一个用python写的一个redis rdb文件分析工具， <a href="https://redis.readthedocs.org/en/latest/server/slowlog.html" target="_blank" rel="external">安装步骤</a><br>之前我在test_34上已经安装配置好了一个， 大家将dump下来的redis rdb文件拷到test_34上分析， 具体可以这样操作：</p>
-<p>######a. 将要分析的redis rdb文件拷贝到test_34上任意目录， 如 32_dump.rdb：</p>
-<p><img src="http://img2001.static.suishenyun.net/25ece6711a70a7938cb1105810f59bd3/a43bdbf0013ba8e5bf66410fb7fa1bf0.jpg!w480.jpg" alt="此处输入图片的描述"></p>
-<p>######b. 执行命令:   rdb -c memory 32_dump.rdb &gt; 32_dump.csv</p>
-<p>######c. 分析完后会生成32_dump.csv文件；（如果rdb文件比较大的话， 会比较慢。。。。）</p>
-<p>######d. 生成的csv文件中，包括所有的key,  编码类型，占用内存等信息：</p>
-<p><img src="http://img2001.static.suishenyun.net/25ece6711a70a7938cb1105810f59bd3/2dc6e4ad458e9c6557389bfb1b0db9db.jpg!w480.jpg" alt="此处输入图片的描述"></p>
-<p>######e. 还有很多其他命令，大家可以自行研究； </p>
-<p>#####（3）、根据这些key，可以对redis 中不规范的key命名进行修改，太长的key浪费内存；</p>
-<p>结合具体业务，找出那些已经不再需要存在于内存的数据，使用命令清除这部分数据，减少内存使用；<br>根据分析结果还能看到那些数据是写比较频繁的、那些是读频繁，那些读写均很频繁，进而可以考虑使用master(写)/slave(读)提高效率；<br>或者将一些读写都很频繁的数据单独出来放到一个redis中；<br>附上一个之前分析的rdb文件的记录：<a href="http://www.zhwnl.cn/share/y1kixaa9l082jxki9q4ht47" target="_blank" rel="external">请戳</a></p>
-<p>####2、Redis的内存容量规划：</p>
-<p>分析rdb文件能够了解到内存中每个key占用的内存，读写数量等等，非常适合做容量规划，根据现有数据key占用的内存，<br>以及value的类型，hash 、 string、 set等就可以大概估算出随着数据的增长，未来一段时间的内存使用情况；<br>附件是之前对Peacock做的一次redis内存规划，供参考。</p>
-<p>###二、MySQL</p>
-<p>####1、现有mysql性能分析，可以按下面几个步骤进行：</p>
-<p>#####（1）、通过show命令查看MySQL状态及变量，找到系统的瓶颈：</p>
-<p>show status ——显示状态信息<br>show processlist ——查看当前SQL执行，包括执行状态、是否锁表等</p>
-<p>#####（2）、通过<a href="http://dev.mysql.com/doc/refman/5.6/en/slow-query-log.html" target="_blank" rel="external">慢查询日志</a>定位那些执行效率较低的sql语句：</p>
-<p>慢查询的开启方式可以上网查找或者找Freed，使用下面的命令，对slow.log分析，从而得到你需要的慢查询语句：<br>mysqldumpslow -s c -t 20 slow.log     访问次数最多的20条sql<br>mysqldumpslow -s r -t 20 slow.log     返回记录集最多的20个sql<br>mysqldumpslow -t 20 -s t slow.log     返回最耗时的20条记录</p>
-<p>#####（3）、使用EXPLAIN对2中得到的慢查询进行分析，了解低效SQL的执行计划。</p>
-<p>#####（4）、针对性的优化：</p>
-<p>优化 insert 语句、优化 group by 语句、优化 order by 语句、优化 join 语句等等；<br>考虑对where查询条件添加索引；<br>定期分析表，使用optimize table；<br>考虑是否是锁问题；<br>考虑拆分表，按年、按月等；<br>考虑读写分离；</p>
-<p>####2、MySQL容量预估：</p>
-<p>对于peacock这样的核心功能是统计、后台广告投放为主的系统，mysql的数据量预估还是比较容易的，而且我们的统计数据一般都是按月存，只要提前建好表就行；万年历的话，我们会根据后台统计，提前准备好响应的shard（32w user一个shard）；所以，mysql的数据规划，主要还是要看相应的统计。</p>
-<p>以上，这些都是之前我们的一些实践。量化分析这事应该经常做，时时做，这样才能对我们的系统有更加深入的了解，而不是凭感觉那块有问题。大家对于这方面有好的方法或方便的工具可以一起学习。</p>
+		<p>#打个标记后面补上</p>
   
 	</div>
 		<footer class="article-footer clearfix">
@@ -135,7 +103,7 @@
 
 <div class="article-share" id="share">
 
-  <div data-url="http://mcdullfei.github.io/2015/11/10/MySQL、Redis量化分析，优化实践的一些总结/" data-title="MySQL、Redis量化分析，优化实践的一些总结 | Renfei&#39;s blog" data-tsina="1809365984" class="share clearfix">
+  <div data-url="http://mcdullfei.github.io/2015/11/10/《Redis设计与实现》笔记-附录RDB文件详解/" data-title="《Redis设计与实现》笔记-附录RDB文件详解 | Renfei&#39;s blog" data-tsina="1809365984" class="share clearfix">
   </div>
 
 </div>
@@ -144,19 +112,11 @@
 	
 <nav class="article-nav clearfix">
  
- <div class="prev" >
- <a href="/2015/11/10/《Redis设计与实现》笔记-附录RDB文件详解/" title="《Redis设计与实现》笔记-附录RDB文件详解">
-  <strong>PREVIOUS:</strong><br/>
-  <span>
-  《Redis设计与实现》笔记-附录RDB文件详解</span>
-</a>
-</div>
-
 
 <div class="next">
-<a href="/2015/11/04/《Redis设计与实现》笔记2/"  title="《Redis设计与实现》笔记2">
+<a href="/2015/11/10/MySQL、Redis量化分析，优化实践的一些总结/"  title="MySQL、Redis量化分析，优化实践的一些总结">
  <strong>NEXT:</strong><br/> 
- <span>《Redis设计与实现》笔记2
+ <span>MySQL、Redis量化分析，优化实践的一些总结
 </span>
 </a>
 </div>
