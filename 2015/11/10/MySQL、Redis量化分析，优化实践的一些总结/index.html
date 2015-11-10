@@ -4,15 +4,13 @@
 <head>
   <meta charset="UTF-8">
   
-    <title>《Redis设计与实现》笔记2 | Renfei&#39;s blog</title>
+    <title>MySQL、Redis量化分析，优化实践的一些总结 | Renfei&#39;s blog</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
     
     <meta name="author" content="Renfei.Monster">
     
-    <meta name="description" content="单机数据库实现
-Redis服务器创建时，会默认创建16个数据库。
-默认情况下redis客户端的默认数据库为0号库（redis-cli默认进去的那个），其中可以用select 数据库编号，进行切换。select 1。
-但问题是，redis至今为止仍然没有返回客户端目标数据库的命令，也就是说如果你用其他">
+    <meta name="description" content="##关于MySQL、Redis量化分析，优化实践的一些总结
+数据量化分析，之前我们主要做了两方面内容：一是分析找出现有系统中redis、mysql的数据热点、性能瓶颈，进而进行针对性的优化；二是根据现有数据量，结合数据的增长情况预估未来3个月、半年的mysql数据量，redis内存使用情况，为扩容做">
     
     
     
@@ -76,15 +74,15 @@ Redis服务器创建时，会默认创建16个数据库。
 		<header class="article-info clearfix">
   <h1 itemprop="name">
     
-      <a href="/2015/11/04/《Redis设计与实现》笔记2/" title="《Redis设计与实现》笔记2" itemprop="url">《Redis设计与实现》笔记2</a>
+      <a href="/2015/11/10/MySQL、Redis量化分析，优化实践的一些总结/" title="MySQL、Redis量化分析，优化实践的一些总结" itemprop="url">MySQL、Redis量化分析，优化实践的一些总结</a>
   </h1>
   <p class="article-author">By
     
       <a href="https://plus.google.com/109281524060750090000?rel=author" title="Renfei.Monster" target="_blank" itemprop="author">Renfei.Monster</a>
     </p>
   <p class="article-time">
-    <time datetime="2015-11-04T09:38:08.000Z" itemprop="datePublished">2015-11-04</time>
-    更新日期:<time datetime="2015-11-10T01:41:27.000Z" itemprop="dateModified">2015-11-10</time>
+    <time datetime="2015-11-10T02:23:53.000Z" itemprop="datePublished">2015-11-10</time>
+    更新日期:<time datetime="2015-11-10T02:32:36.000Z" itemprop="dateModified">2015-11-10</time>
     
   </p>
 </header>
@@ -93,61 +91,41 @@ Redis服务器创建时，会默认创建16个数据库。
 		
 		<div id="toc" class="toc-article">
 			<strong class="toc-title">文章目录</strong>
-		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#单机数据库实现"><span class="toc-number">1.</span> <span class="toc-text">单机数据库实现</span></a></li></ol>
+		
 		</div>
 		
-		<h2 id="单机数据库实现"><strong>单机数据库实现</strong></h2><ol>
-<li>Redis服务器创建时，会默认创建16个数据库。</li>
-<li>默认情况下redis客户端的默认数据库为0号库（redis-cli默认进去的那个），其中可以用select 数据库编号，进行切换。select 1。</li>
-<li>但问题是，redis至今为止仍然没有返回客户端目标数据库的命令，也就是说如果你用其他语言客户端执行redis命令，该客户端时没有像redis-cli那样显示出目标数据库的编号的（比如你使用jedis第三方插件），所以现在使用redis时不会有跨库操作。</li>
-<li>redis是一个键值对的数据库服务器，他的键空间维护着键字典和expires字典（失效字典是记录设置了失效时间的key字典）</li>
-<li>INFO stats可以看程序中使用键的命中情况</li>
-<li>对于键的生存时间和失效时间的管理</li>
-</ol>
-<blockquote>
-<ul>
-<li>expire、expireat、pexpire、pexpireat四个命令可以设计key的过期时间，四个命令分别代表：以秒为单位设置过期时间、以秒为单位设置过期时间点（unix时间戳）、以毫秒为单位设置过期时间、以毫秒为单位设置过期时间点（unix时间戳）。</li>
-<li>setex的string类型命令可以在设置一个字符串键的同时设置过期时间。</li>
-<li>过期时间的底层设计原理：实际上expire、expireat、pexpire三个命令都是使用pexpireat来实现的，pexpireat是unix时间戳，说白了过期时间在服务器保存就是时间戳而已，后面的ttl、pttl命令只不过是当前时间戳－设置的过期时间戳计算出来的。</li>
-</ul>
-</blockquote>
-<ol>
-<li>过期键删除策略：</li>
-</ol>
-<blockquote>
-<ul>
-<li>在程序设计时比较常用的删除策略：<ul>
-<li>定时删除（即在创建key时附带创建一个定时器，用定时器来执行删除操作）、</li>
-<li>惰性删除（放任key不管，在key使用时检查生存时间并决定是否执行删除操作）、</li>
-<li>定期删除（单独进程每隔一段时间检查key，决定是否删除）</li>
-</ul>
-</li>
-<li>以上三种的优缺点：<ul>
-<li>定时删除：对内存最友好的，但是每个key增加一个定时器，在服务器执行上会对cpu带来很大压力，是对cpu最不友好的。</li>
-<li>惰性删除：对cpu最友好的，但是对于内存最不友好，因为key的删除只有在被用到时才会去判断有效时间，而大量不用的key就会常驻内存得不到回收，这对于redis这种内存型数据库是极大的资源浪费。</li>
-<li>定期删除：定期删除可以说是上面两种方式的折中，说白了如果执行频率过快，它也就是定时删除，如果执行的少，执行时间短也就是惰性删除。</li>
-<li>思考：cpu和内存在程序设计时总会存在互斥的情况，要想优先cpu往往就会牺牲内存，如果想优先内存往往会牺牲掉cpu，所以程序设计就会找一个平衡点，做出取舍。redis对于过期key的操作就采用定期删除＋惰性删除的方式做了折中。其实在我们的redis业务层如果想删除不用的key也是做定期删除＋惰性删除两种结合的方式。&gt;&gt;&gt;&gt;说白了还是时间换空间，空间换时间的问题。</li>
-</ul>
-</li>
-<li>redis的删除策略（redis结合了惰性删除和定期删除两种方式来进行删除）具体实现：<ul>
-<li>在每次使用key时进行惰性删除策略，执行一个key的属性会在执行前优先执行expireIfNeeded函数，此函数就是用来判断key是否过期，如果过期，将不执行实际key操作，而是在这一步直接删除掉key。<br><strong>需要注意</strong>：redis服务器做主、从处理时，如果使用key获取value命令，比如get，这是expireIfNeeded做过期判断时只会在主服务器有效，而从服务器会直接返回get的值而不会进行del操作。因为主、从部署时，同步是以主服务器为标准的。</li>
-<li>定期删除策略的执行：犹豫redis的key比较多，所以redis设计为随机检查的方式来执行，redis服务器周期性的执行activeExpireCycle函数，此函数在规定时间内，分多次遍历服务器中的数据库，从数据库的expire字典（过期字典）中随机检查一部分键来执行过期删除操作。这种方式很取巧，但也很有效，试想过期字典在每次执行过期检查时都删除一部分过期键，那么随机的命中概率会逐渐增大，而不需要浪费cpu遍历过期字典中的所有键。</li>
-<li>定期删除虽然对过期字典是随机遍历的，但是对于数据库是全部执行的，current_db全局变量纪录了，activeExpireCycle正在执行的数据库编号。</li>
-</ul>
-</li>
-</ul>
-</blockquote>
-<ol>
-<li>RDB持久化</li>
-</ol>
-<blockquote>
-<ul>
-<li>对于RDB，save命令会阻塞其他命令，所以save要慎用或者不用（redis是单线程的，一个命令执行其他命令都在等待状态），bgsave不会阻塞其他命令，因为他单独开了一个线程处理</li>
-<li>redis允许用户通过配置服务器的save选项让服务器每隔一段时间来执行一次bgsave命令。</li>
-<li>rdb的载入工作会在服务器启动时自动执行。</li>
-<li>如果服务器开启了aof持久化功能那么服务器会优先选择AOF文件来还原数据库。</li>
-</ul>
-</blockquote>
+		<p>##关于MySQL、Redis量化分析，优化实践的一些总结</p>
+<p>数据量化分析，之前我们主要做了两方面内容：<br>一是分析找出现有系统中redis、mysql的数据热点、性能瓶颈，进而进行针对性的优化；<br>二是根据现有数据量，结合数据的增长情况预估未来3个月、半年的mysql数据量，redis内存使用情况，为扩容做准备；</p>
+<p>下面分别针对redis和mysql对这两方面做一些简单介绍：</p>
+<p>###一、<a href="http://redis.io/" target="_blank" rel="external">Redis</a></p>
+<p>####1、对于redis的分析优化：</p>
+<p>#####（1）、通过 <a href="https://redis.readthedocs.org/en/latest/server/slowlog.html" target="_blank" rel="external">SLOWLOG</a> </p>
+<p>SLOWLOG get命令查看Redis的慢日志，找出执行耗时的命令，进而针对性分析优化；具体的优化方法，比如：<br>结合业务，分析是否是代码中对于redis的使用方式不对，是否可以选择更合适的数据结构；<br>使用hmget、hmset这样的批量操作命令；<br>使用pipline管道，批量发送命令；<br>使用lua脚本，在服务端处理你的业务逻辑，而不必将数据取回客户端处理后再请求客户端。peacock的统计和万年历acctk校验都用到了一些lua脚本，大家可以看看；</p>
+<p>#####（2）、使用 redis-rdb-tools</p>
+<p>redis-rdb-tools这个工具可以分析redis中所有key占用内存的详细情况， 找出内存占用最多的key优化，同时还可以找出已经过期的没用的key进行清理，释放内存；<br>redis-rdb-tools 是一个用python写的一个redis rdb文件分析工具， <a href="https://redis.readthedocs.org/en/latest/server/slowlog.html" target="_blank" rel="external">安装步骤</a><br>之前我在test_34上已经安装配置好了一个， 大家将dump下来的redis rdb文件拷到test_34上分析， 具体可以这样操作：</p>
+<p>######a. 将要分析的redis rdb文件拷贝到test_34上任意目录， 如 32_dump.rdb：</p>
+<p><img src="http://img2001.static.suishenyun.net/25ece6711a70a7938cb1105810f59bd3/a43bdbf0013ba8e5bf66410fb7fa1bf0.jpg!w480.jpg" alt="此处输入图片的描述"></p>
+<p>######b. 执行命令:   rdb -c memory 32_dump.rdb &gt; 32_dump.csv</p>
+<p>######c. 分析完后会生成32_dump.csv文件；（如果rdb文件比较大的话， 会比较慢。。。。）</p>
+<p>######d. 生成的csv文件中，包括所有的key,  编码类型，占用内存等信息：</p>
+<p><img src="http://img2001.static.suishenyun.net/25ece6711a70a7938cb1105810f59bd3/2dc6e4ad458e9c6557389bfb1b0db9db.jpg!w480.jpg" alt="此处输入图片的描述"></p>
+<p>######e. 还有很多其他命令，大家可以自行研究； </p>
+<p>#####（3）、根据这些key，可以对redis 中不规范的key命名进行修改，太长的key浪费内存；</p>
+<p>结合具体业务，找出那些已经不再需要存在于内存的数据，使用命令清除这部分数据，减少内存使用；<br>根据分析结果还能看到那些数据是写比较频繁的、那些是读频繁，那些读写均很频繁，进而可以考虑使用master(写)/slave(读)提高效率；<br>或者将一些读写都很频繁的数据单独出来放到一个redis中；<br>附上一个之前分析的rdb文件的记录：<a href="http://www.zhwnl.cn/share/y1kixaa9l082jxki9q4ht47" target="_blank" rel="external">请戳</a></p>
+<p>####2、Redis的内存容量规划：</p>
+<p>分析rdb文件能够了解到内存中每个key占用的内存，读写数量等等，非常适合做容量规划，根据现有数据key占用的内存，<br>以及value的类型，hash 、 string、 set等就可以大概估算出随着数据的增长，未来一段时间的内存使用情况；<br>附件是之前对Peacock做的一次redis内存规划，供参考。</p>
+<p>###二、MySQL</p>
+<p>####1、现有mysql性能分析，可以按下面几个步骤进行：</p>
+<p>#####（1）、通过show命令查看MySQL状态及变量，找到系统的瓶颈：</p>
+<p>show status ——显示状态信息<br>show processlist ——查看当前SQL执行，包括执行状态、是否锁表等</p>
+<p>#####（2）、通过<a href="http://dev.mysql.com/doc/refman/5.6/en/slow-query-log.html" target="_blank" rel="external">慢查询日志</a>定位那些执行效率较低的sql语句：</p>
+<p>慢查询的开启方式可以上网查找或者找Freed，使用下面的命令，对slow.log分析，从而得到你需要的慢查询语句：<br>mysqldumpslow -s c -t 20 slow.log     访问次数最多的20条sql<br>mysqldumpslow -s r -t 20 slow.log     返回记录集最多的20个sql<br>mysqldumpslow -t 20 -s t slow.log     返回最耗时的20条记录</p>
+<p>#####（3）、使用EXPLAIN对2中得到的慢查询进行分析，了解低效SQL的执行计划。</p>
+<p>#####（4）、针对性的优化：</p>
+<p>优化 insert 语句、优化 group by 语句、优化 order by 语句、优化 join 语句等等；<br>考虑对where查询条件添加索引；<br>定期分析表，使用optimize table；<br>考虑是否是锁问题；<br>考虑拆分表，按年、按月等；<br>考虑读写分离；</p>
+<p>####2、MySQL容量预估：</p>
+<p>对于peacock这样的核心功能是统计、后台广告投放为主的系统，mysql的数据量预估还是比较容易的，而且我们的统计数据一般都是按月存，只要提前建好表就行；万年历的话，我们会根据后台统计，提前准备好响应的shard（32w user一个shard）；所以，mysql的数据规划，主要还是要看相应的统计。</p>
+<p>以上，这些都是之前我们的一些实践。量化分析这事应该经常做，时时做，这样才能对我们的系统有更加深入的了解，而不是凭感觉那块有问题。大家对于这方面有好的方法或方便的工具可以一起学习。</p>
   
 	</div>
 		<footer class="article-footer clearfix">
@@ -157,7 +135,7 @@ Redis服务器创建时，会默认创建16个数据库。
 
 <div class="article-share" id="share">
 
-  <div data-url="http://mcdullfei.github.io/2015/11/04/《Redis设计与实现》笔记2/" data-title="《Redis设计与实现》笔记2 | Renfei&#39;s blog" data-tsina="1809365984" class="share clearfix">
+  <div data-url="http://mcdullfei.github.io/2015/11/10/MySQL、Redis量化分析，优化实践的一些总结/" data-title="MySQL、Redis量化分析，优化实践的一些总结 | Renfei&#39;s blog" data-tsina="1809365984" class="share clearfix">
   </div>
 
 </div>
@@ -166,19 +144,11 @@ Redis服务器创建时，会默认创建16个数据库。
 	
 <nav class="article-nav clearfix">
  
- <div class="prev" >
- <a href="/2015/11/10/MySQL、Redis量化分析，优化实践的一些总结/" title="MySQL、Redis量化分析，优化实践的一些总结">
-  <strong>PREVIOUS:</strong><br/>
-  <span>
-  MySQL、Redis量化分析，优化实践的一些总结</span>
-</a>
-</div>
-
 
 <div class="next">
-<a href="/2015/11/04/《Redis设计与实现》笔记/"  title="《Redis设计与实现》笔记">
+<a href="/2015/11/04/《Redis设计与实现》笔记2/"  title="《Redis设计与实现》笔记2">
  <strong>NEXT:</strong><br/> 
- <span>《Redis设计与实现》笔记
+ <span>《Redis设计与实现》笔记2
 </span>
 </a>
 </div>
@@ -195,7 +165,7 @@ Redis服务器创建时，会默认创建16个数据库。
 
   <div id="toc" class="toc-aside">
   <strong class="toc-title">文章目录</strong>
-  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#单机数据库实现"><span class="toc-number">1.</span> <span class="toc-text">单机数据库实现</span></a></li></ol>
+  
   </div>
 
 <div id="asidepart">
