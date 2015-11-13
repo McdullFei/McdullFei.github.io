@@ -82,7 +82,7 @@
     </p>
   <p class="article-time">
     <time datetime="2015-11-03T07:41:57.000Z" itemprop="datePublished">2015-11-03</time>
-    更新日期:<time datetime="2015-11-03T07:45:34.000Z" itemprop="dateModified">2015-11-03</time>
+    更新日期:<time datetime="2015-11-13T06:10:57.000Z" itemprop="dateModified">2015-11-13</time>
     
   </p>
 </header>
@@ -98,8 +98,8 @@
 <p>&nbsp;&nbsp;&nbsp;&nbsp;最近发现项目中用的hyperloglog进行去重时，随着hyperloglog存储的数据越来越多，误差率会越来越大。</p>
 <p>&nbsp;&nbsp;&nbsp;&nbsp;hyperloglog是根据bloom filter算法设计出来的存储结构，bloom<br>filter介绍如下： <a href="http://blog.csdn.net/jiaomeng/article/details/1495500" target="_blank" rel="external">http://blog.csdn.net/jiaomeng/article/details/1495500</a><br>&nbsp;&nbsp;&nbsp;&nbsp;bloom<br>filter允许一定的误差率(在判断一个元素是否属于某个集合时，有可能会把不属于这个集合的元素误认为属于这个集合)</p>
 </blockquote>
-<p><img src="http://img2026.static.suishenyun.net/c4f9a5c6c0bf448eb1c1b955b436f2d1/62788c3d307b84101663a6923f795f8d.png!w480.jpg" alt="此处输入图片的描述"></p>
-<p><img src="http://img2026.static.suishenyun.net/c4f9a5c6c0bf448eb1c1b955b436f2d1/f8fe59964981c35882ddc6e1323baa6a.png!w480.jpg" alt="此处输入图片的描述"></p>
+<p><img src="https://raw.githubusercontent.com/McdullFei/blog_source/master/hyploglog1.png" alt="此处输入图片的描述"></p>
+<p><img src="https://raw.githubusercontent.com/McdullFei/blog_source/master/hyploglog2.png" alt="此处输入图片的描述"></p>
 <hr>
 <p>&nbsp;&nbsp;&nbsp;&nbsp;上面数据对比说明1973535这条数据在hyperloglog中是存在的，但是在同步操作的历史数据表中却没有，也就是说，本来不存在于hyperloglog中的1973535数据被判断为存在于hyperloglog了。</p>
 <p>&nbsp;&nbsp;&nbsp;&nbsp;感觉redis中hyperloglog误差率还是挺大的。。。。</p>
