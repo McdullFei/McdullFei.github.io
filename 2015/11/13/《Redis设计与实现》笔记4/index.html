@@ -9,6 +9,10 @@
     
     <meta name="author" content="Renfei.Monster">
     
+    <meta name="description" content="单机数据库实现——事件Redis服务器是一个事件驱动程序，分为：文件事件和时间事件两大类。文件事件：执行客户端命令时间事件：定时调度任务
+文件事件文件事件详述
+redis文件事件是单线程的，但是通过io多路复用，监听多个套接字来实现高可用的网络通信模型（这里涉及异步io，系统内核epoll机制。。。">
+    
     
     
     
@@ -79,7 +83,7 @@
     </p>
   <p class="article-time">
     <time datetime="2015-11-13T01:30:13.000Z" itemprop="datePublished">2015-11-13</time>
-    更新日期:<time datetime="2015-11-13T01:30:13.000Z" itemprop="dateModified">2015-11-13</time>
+    更新日期:<time datetime="2015-11-23T02:44:14.000Z" itemprop="dateModified">2015-11-23</time>
     
   </p>
 </header>
@@ -88,10 +92,21 @@
 		
 		<div id="toc" class="toc-article">
 			<strong class="toc-title">文章目录</strong>
-		
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#单机数据库实现——事件"><span class="toc-number">1.</span> <span class="toc-text">单机数据库实现——事件</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#文件事件"><span class="toc-number">1.1.</span> <span class="toc-text">文件事件</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#文件事件详述"><span class="toc-number">1.1.1.</span> <span class="toc-text">文件事件详述</span></a></li></ol></li></ol></li></ol>
 		</div>
 		
-		  
+		<h2 id="单机数据库实现——事件">单机数据库实现——事件</h2><p>Redis服务器是一个事件驱动程序，分为：文件事件和时间事件两大类。<br>文件事件：执行客户端命令<br>时间事件：定时调度任务</p>
+<h3 id="文件事件">文件事件</h3><h4 id="文件事件详述">文件事件详述</h4><blockquote>
+<p>redis文件事件是单线程的，但是通过io多路复用，监听多个套接字来实现高可用的网络通信模型<strong>（这里涉及异步io，系统内核epoll机制。。。。）</strong></p>
+<p>文件事件处理器4个组成部分：<br><img src="https://raw.githubusercontent.com/McdullFei/blog_source/master/wenjianxitong1.png" alt="文件处理器"></p>
+</blockquote>
+<blockquote>
+<p>尽管多个文件事件可能会并发的出现，单I/O多路复用程序会将套接字放在一个队列中，然后通过队列，以有序、同步、每次一个套接字的方式想文件事件分派器传送套接字。<br><img src="https://raw.githubusercontent.com/McdullFei/blog_source/master/taojizi.png" alt="套接字"></p>
+</blockquote>
+<blockquote>
+<p>Redis的I/O多路复用程序所有功能都是通过包装：select、epoll、evport和kqueue这些i/o多路复用函数库来实现的。</p>
+</blockquote>
+  
 	</div>
 		<footer class="article-footer clearfix">
 
@@ -138,7 +153,7 @@
 
   <div id="toc" class="toc-aside">
   <strong class="toc-title">文章目录</strong>
-  
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#单机数据库实现——事件"><span class="toc-number">1.</span> <span class="toc-text">单机数据库实现——事件</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#文件事件"><span class="toc-number">1.1.</span> <span class="toc-text">文件事件</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#文件事件详述"><span class="toc-number">1.1.1.</span> <span class="toc-text">文件事件详述</span></a></li></ol></li></ol></li></ol>
   </div>
 
 <div id="asidepart">
