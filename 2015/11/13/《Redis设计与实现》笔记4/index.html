@@ -83,7 +83,7 @@ redis文件事件是单线程的，但是通过io多路复用，监听多个套�
     </p>
   <p class="article-time">
     <time datetime="2015-11-13T01:30:13.000Z" itemprop="datePublished">2015-11-13</time>
-    更新日期:<time datetime="2015-11-23T02:44:14.000Z" itemprop="dateModified">2015-11-23</time>
+    更新日期:<time datetime="2015-11-23T03:46:24.000Z" itemprop="dateModified">2015-11-23</time>
     
   </p>
 </header>
@@ -92,7 +92,7 @@ redis文件事件是单线程的，但是通过io多路复用，监听多个套�
 		
 		<div id="toc" class="toc-article">
 			<strong class="toc-title">文章目录</strong>
-		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#单机数据库实现——事件"><span class="toc-number">1.</span> <span class="toc-text">单机数据库实现——事件</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#文件事件"><span class="toc-number">1.1.</span> <span class="toc-text">文件事件</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#文件事件详述"><span class="toc-number">1.1.1.</span> <span class="toc-text">文件事件详述</span></a></li></ol></li></ol></li></ol>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#单机数据库实现——事件"><span class="toc-number">1.</span> <span class="toc-text">单机数据库实现——事件</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#文件事件"><span class="toc-number">1.1.</span> <span class="toc-text">文件事件</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#文件事件详述"><span class="toc-number">1.1.1.</span> <span class="toc-text">文件事件详述</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#时间事件"><span class="toc-number">1.2.</span> <span class="toc-text">时间事件</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#实现"><span class="toc-number">1.2.1.</span> <span class="toc-text">实现</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#serverCron函数主要工作"><span class="toc-number">1.2.2.</span> <span class="toc-text">serverCron函数主要工作</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#事件调度"><span class="toc-number">1.3.</span> <span class="toc-text">事件调度</span></a></li></ol></li></ol>
 		</div>
 		
 		<h2 id="单机数据库实现——事件">单机数据库实现——事件</h2><p>Redis服务器是一个事件驱动程序，分为：文件事件和时间事件两大类。<br>文件事件：执行客户端命令<br>时间事件：定时调度任务</p>
@@ -104,7 +104,31 @@ redis文件事件是单线程的，但是通过io多路复用，监听多个套�
 <p>尽管多个文件事件可能会并发的出现，单I/O多路复用程序会将套接字放在一个队列中，然后通过队列，以有序、同步、每次一个套接字的方式想文件事件分派器传送套接字。<br><img src="https://raw.githubusercontent.com/McdullFei/blog_source/master/taojizi.png" alt="套接字"></p>
 </blockquote>
 <blockquote>
-<p>Redis的I/O多路复用程序所有功能都是通过包装：select、epoll、evport和kqueue这些i/o多路复用函数库来实现的。</p>
+<p>Redis的I/O多路复用程序所有功能都是通过包装：select、epoll、evport和kqueue这些i/o多路复用函数库来实现的。<br>Redis为每个I/O多路复用函数库都实现了相同的api，所以I/O多路复用程序的底层实现是可以互换的。<br><img src="https://raw.githubusercontent.com/McdullFei/blog_source/master/ioduolu.png" alt="io"></p>
+</blockquote>
+<h3 id="时间事件">时间事件</h3><p>时间事件可以分为：定时事件、周期性事件。<br>ID：递增<br>when：时间戳<br>timePro：时间处理函数</p>
+<p>一个时间事件是定时事件还是周期性事件，取决于时间事件处理器的返回值：<br>通过timePro返回值来确定是定时事件还是周期事件。<br>返回ae.h/AE_NOMORE为定时事件、非ae.h/AE_NOMORE（返回运行周期时间）为周期事件</p>
+<h4 id="实现">实现</h4><blockquote>
+<p>服务器将所有时间事件都放在一个无序链表中，每当时间事件执行器运行时，会遍历整个链表，查找所有已达到的时间事件，并调用相应的事件处理器。<br>（对when时间戳无序的，新的id事件总插入表头。）<br><strong>在目前版本中正常模式下redis服务器只是用serverCron一个时间事件。而在benchmark模式下，服务器也只使用两个时间事件。所以使用无序链表也不会影响性能。</strong></p>
+</blockquote>
+<h4 id="serverCron函数主要工作">serverCron函数主要工作</h4><blockquote>
+<ul>
+<li>更新服务器各类统计信息，比如时间、内存占用、数据库占用等</li>
+<li>清理数据库中的过期键值对</li>
+<li>关闭和清理链接失败的客户端</li>
+<li>尝试进行RDB和AOF持久化操作</li>
+<li>如果服务器是主服务器那么定期对从服务器进行同步</li>
+<li>如果出于集群模式，对集群进行定期同步和链接测试<br><strong>服务器默认配置serverCron每秒运行10次，平均每个100毫秒运行一次。redis.conf文件中的hz选项来配置serverCron每秒执行次数</strong></li>
+</ul>
+</blockquote>
+<h3 id="事件调度">事件调度</h3><p>服务器中同时存在文件事件和时间事件两种事件类型，所以服务器必须对其进行调度。何时处理文件事件何时处理时间事件，以及花多少时间来处理它们。<br><img src="https://raw.githubusercontent.com/McdullFei/blog_source/master/shijaindiaodu.png" alt="事件调度"></p>
+<blockquote>
+<ul>
+<li>aeApiPoll函数的最大阻塞时间由到达时间最接近当前时间的时间事件决定，这个方法既可以避免服务器对时间事件进行频繁轮训（忙等待），也会确保aeApiPoll函数不会阻塞太长时间。</li>
+<li>文件事件是随机出现的，所以等待并处理完一次文件事件时，如果没有任何时间事件到达，那么会继续等待处理文件事件，随着文件事件的执行，时间会趋向与下一个时间事件的执行时间，最终来执行时间事件。</li>
+<li>对文件事件和时间事件都是同步、有序、原子执行的。服务器不会中途中断时间，也不会对事件进行抢占。因此不管是文件处理器还是时间处理器，他们会尽量减少程序阻塞时间，并在需要时让出执行权，降低造成事件饥饿的可能性。</li>
+<li>因为时间事件在文件事件之后执行，并且事件之间不会出现抢占，所以时间事件的实际处理事件会比设定的事件晚一些。</li>
+</ul>
 </blockquote>
   
 	</div>
@@ -153,7 +177,7 @@ redis文件事件是单线程的，但是通过io多路复用，监听多个套�
 
   <div id="toc" class="toc-aside">
   <strong class="toc-title">文章目录</strong>
-  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#单机数据库实现——事件"><span class="toc-number">1.</span> <span class="toc-text">单机数据库实现——事件</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#文件事件"><span class="toc-number">1.1.</span> <span class="toc-text">文件事件</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#文件事件详述"><span class="toc-number">1.1.1.</span> <span class="toc-text">文件事件详述</span></a></li></ol></li></ol></li></ol>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#单机数据库实现——事件"><span class="toc-number">1.</span> <span class="toc-text">单机数据库实现——事件</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#文件事件"><span class="toc-number">1.1.</span> <span class="toc-text">文件事件</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#文件事件详述"><span class="toc-number">1.1.1.</span> <span class="toc-text">文件事件详述</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#时间事件"><span class="toc-number">1.2.</span> <span class="toc-text">时间事件</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#实现"><span class="toc-number">1.2.1.</span> <span class="toc-text">实现</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#serverCron函数主要工作"><span class="toc-number">1.2.2.</span> <span class="toc-text">serverCron函数主要工作</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#事件调度"><span class="toc-number">1.3.</span> <span class="toc-text">事件调度</span></a></li></ol></li></ol>
   </div>
 
 <div id="asidepart">
