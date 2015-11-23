@@ -75,7 +75,13 @@
     <h1 itemprop="name">《Redis设计与实现》笔记5</h1>
     
      
-           <p itemprop="description" >单机数据库实现——客户端</p>
+           <p itemprop="description" >单机数据库实现——客户端
+Redis服务器使用clients链表来存储客户端状态结构。
+客户端属性，套接字描述符
+redisClient的fd属性记录了客户端正在使用的客户端套接字描述符。
+
+fd＝－1，伪客户端，命令请求来源于AOF文件或者lua脚本。
+fd大于－1，普通客户端</p>
         
     
     <time datetime="2015-11-23T03:49:19.000Z" itemprop="datePublished">2015-11-23</time>

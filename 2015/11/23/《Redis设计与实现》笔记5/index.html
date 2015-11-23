@@ -9,7 +9,15 @@
     
     <meta name="author" content="Renfei.Monster">
     
-    <meta name="description" content="单机数据库实现——客户端">
+    <meta name="description" content="单机数据库实现——客户端
+Redis服务器使用clients链表来存储客户端状态结构。
+客户端属性，套接字描述符
+redisClient的fd属性记录了客户端正在使用的客户端套接字描述符。
+
+fd＝－1，伪客户端，命令请求来源于AOF文件或者lua脚本。
+fd大于－1，普通客户端。
+
+redisCl">
     
     
     
@@ -81,7 +89,7 @@
     </p>
   <p class="article-time">
     <time datetime="2015-11-23T03:49:19.000Z" itemprop="datePublished">2015-11-23</time>
-    更新日期:<time datetime="2015-11-23T07:05:04.000Z" itemprop="dateModified">2015-11-23</time>
+    更新日期:<time datetime="2015-11-23T08:26:52.000Z" itemprop="dateModified">2015-11-23</time>
     
   </p>
 </header>
@@ -90,10 +98,38 @@
 		
 		<div id="toc" class="toc-article">
 			<strong class="toc-title">文章目录</strong>
-		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#单机数据库实现——客户端"><span class="toc-number">1.</span> <span class="toc-text">单机数据库实现——客户端</span></a></li></ol>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#单机数据库实现——客户端"><span class="toc-number">1.</span> <span class="toc-text">单机数据库实现——客户端</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#客户端属性，套接字描述符"><span class="toc-number">1.1.</span> <span class="toc-text">客户端属性，套接字描述符</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#客户端创建与关闭"><span class="toc-number">1.2.</span> <span class="toc-text">客户端创建与关闭</span></a></li></ol></li></ol>
 		</div>
 		
 		<h2 id="单机数据库实现——客户端">单机数据库实现——客户端</h2><p><img src="https://raw.githubusercontent.com/McdullFei/blog_source/master/kehuduanserver.png" alt="服务器客户端"></p>
+<p>Redis服务器使用clients链表来存储客户端状态结构。</p>
+<h3 id="客户端属性，套接字描述符">客户端属性，套接字描述符</h3><blockquote>
+<p>redisClient的fd属性记录了客户端正在使用的客户端套接字描述符。</p>
+<ul>
+<li>fd＝－1，伪客户端，命令请求来源于AOF文件或者lua脚本。</li>
+<li>fd大于－1，普通客户端。</li>
+</ul>
+<p>redisClient的lastinteraction可以用来计算客户端的空转时间，使用client list进行查看<br><img src="https://raw.githubusercontent.com/McdullFei/blog_source/master/clientlist.PNG" alt="clientlist"></p>
+</blockquote>
+<h3 id="客户端创建与关闭">客户端创建与关闭</h3><blockquote>
+<ul>
+<li><strong>普通客户端创建</strong>，会在连接服务器时，服务端通过连接事件处理器，为客户端创建客户端状态，并将客户端添加到clients链表结尾。</li>
+<li><strong>普通客户端的关闭</strong>，<ul>
+<li>客户端进程关闭或被杀死</li>
+<li>客户端向服务器发送带有不符合协议格式的命令请求</li>
+<li>客户端成为client kill的目标</li>
+<li>服务器设置timeout配置选项，客户端空转时间超出timeout时会被关闭。例外情况：客户端是主服务器（打开了REDIS_MASTER标志），从服务器（打开了redis_slave标志），正在被blpop等命令阻塞（打开了REDIS_BLOCKED标志），或在执行subscriber、psubscriber等订阅命令，那么即使客户端的空转时间超出timeout值，客户端也不会被服务器关闭</li>
+<li>客户端发送命令大小超出了输入缓冲区的限制大小（默认1gb）</li>
+<li>发送给客户端的回复超出了输出缓冲区的大小，具体如下：</li>
+</ul>
+</li>
+<li><strong>服务器输出缓冲区限制模式</strong> ，硬性限制、软性限制<ul>
+<li>硬性限制：超出硬性设置大小，立即关闭。</li>
+<li>软性限制：超出软性设置大小，但没超出硬性设置大小，obuf_soft_limit_reached_time属性纪录客户端到达软性限制的起始时间，之后服务器监视客户端，如果持续超出限制，并达到软性限制超出时间，客户端会被关闭。如果未达到超出时间则不会关闭，obuf_soft_limit_reached_time会被清0。<br>client_output_buffer_limit配置项可以对相关参数进行配置。<br><img src="https://raw.githubusercontent.com/McdullFei/blog_source/master/redisconfig1.PNG" alt="config"></li>
+</ul>
+</li>
+</ul>
+</blockquote>
   
 	</div>
 		<footer class="article-footer clearfix">
@@ -133,7 +169,7 @@
 
   <div id="toc" class="toc-aside">
   <strong class="toc-title">文章目录</strong>
-  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#单机数据库实现——客户端"><span class="toc-number">1.</span> <span class="toc-text">单机数据库实现——客户端</span></a></li></ol>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#单机数据库实现——客户端"><span class="toc-number">1.</span> <span class="toc-text">单机数据库实现——客户端</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#客户端属性，套接字描述符"><span class="toc-number">1.1.</span> <span class="toc-text">客户端属性，套接字描述符</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#客户端创建与关闭"><span class="toc-number">1.2.</span> <span class="toc-text">客户端创建与关闭</span></a></li></ol></li></ol>
   </div>
 
 <div id="asidepart">
