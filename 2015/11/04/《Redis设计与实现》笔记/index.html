@@ -82,7 +82,7 @@
     </p>
   <p class="article-time">
     <time datetime="2015-11-04T02:19:01.000Z" itemprop="datePublished">2015-11-04</time>
-    更新日期:<time datetime="2015-11-05T02:36:13.000Z" itemprop="dateModified">2015-11-05</time>
+    更新日期:<time datetime="2015-11-24T07:19:31.000Z" itemprop="dateModified">2015-11-24</time>
     
   </p>
 </header>
@@ -133,7 +133,7 @@
 </li>
 </ul>
 </blockquote>
-<p>这就使我们在做redis设计时，存放的value尽量简单到整数值，这样不止节省redis的内存（比如存放id就要比存放xxx.id这种字符串省），在redis底层对比对象时复杂度也更低，更加节省了cpu消耗。</p>
+<p>这就使我们在做redis设计时，存放的value尽量简单到整数值（0-9999的数字），会使用到一部分共享对象。<br><strong> 注意：Redis由于共享对象比较的复杂度，只针对0-9999的数字进行共享。 </strong></p>
 <p>redis对象空转时常的设计：</p>
 <blockquote>
 <ul>
