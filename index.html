@@ -75,7 +75,9 @@
     <h1 itemprop="name">《Redis设计与实现》笔记6</h1>
     
      
-           <p itemprop="description" >单机数据库实现——serverCron函数</p>
+           <p itemprop="description" >单机数据库实现——serverCron函数上面已经介绍过serverCron函数是redis的时间事件默认的唯一个执行函数，每隔100毫秒执行一次。下面介绍此函数的主要作用：
+更新服务器时间缓存
+设计：由于redis中有很多地方需要获取系统当前时间为了减少系统调用次数，估redi</p>
         
     
     <time datetime="2015-11-23T08:27:43.000Z" itemprop="datePublished">2015-11-23</time>
