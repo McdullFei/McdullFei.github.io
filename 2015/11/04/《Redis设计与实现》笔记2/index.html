@@ -84,7 +84,7 @@ Redis服务器创建时，会默认创建16个数据库。
     </p>
   <p class="article-time">
     <time datetime="2015-11-04T09:38:08.000Z" itemprop="datePublished">2015-11-04</time>
-    更新日期:<time datetime="2015-11-10T01:41:27.000Z" itemprop="dateModified">2015-11-10</time>
+    更新日期:<time datetime="2015-11-25T01:58:54.000Z" itemprop="dateModified">2015-11-25</time>
     
   </p>
 </header>
@@ -142,7 +142,7 @@ Redis服务器创建时，会默认创建16个数据库。
 </ol>
 <blockquote>
 <ul>
-<li>对于RDB，save命令会阻塞其他命令，所以save要慎用或者不用（redis是单线程的，一个命令执行其他命令都在等待状态），bgsave不会阻塞其他命令，因为他单独开了一个线程处理</li>
+<li>对于RDB，save命令会阻塞其他命令，所以save要慎用或者不用（redis是单线程的，一个命令执行其他命令都在等待状态），bgsave不会阻塞其他命令，因为他单独开了一个线程创建RDB，服务器进程继续处理命令，命令放在缓冲区里。</li>
 <li>redis允许用户通过配置服务器的save选项让服务器每隔一段时间来执行一次bgsave命令。</li>
 <li>rdb的载入工作会在服务器启动时自动执行。</li>
 <li>如果服务器开启了aof持久化功能那么服务器会优先选择AOF文件来还原数据库。</li>
