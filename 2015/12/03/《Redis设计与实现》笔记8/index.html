@@ -4,17 +4,12 @@
 <head>
   <meta charset="UTF-8">
   
-    <title>《Redis设计与实现》笔记7 | Renfei&#39;s blog</title>
+    <title>《Redis设计与实现》笔记8 | Renfei&#39;s blog</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
     
     <meta name="author" content="Renfei.Monster">
     
-    <meta name="description" content="单机数据库实现——初始化服务器阶段：
-
-初始化服务器状态结构initServerConfig
-载入服务器配置数据 initServerConfig
-初始化服务器数据结构 initServer
-还原数据库状态RDB或者AOF，如果服务器的AOF持久化开关没打开则使用RDB进行还原，反之使用AOF还原。">
+    <meta name="description" content="多机数据库的实现——复制">
     
     
     
@@ -78,15 +73,15 @@
 		<header class="article-info clearfix">
   <h1 itemprop="name">
     
-      <a href="/2015/11/24/《Redis设计与实现》笔记7/" title="《Redis设计与实现》笔记7" itemprop="url">《Redis设计与实现》笔记7</a>
+      <a href="/2015/12/03/《Redis设计与实现》笔记8/" title="《Redis设计与实现》笔记8" itemprop="url">《Redis设计与实现》笔记8</a>
   </h1>
   <p class="article-author">By
     
       <a href="https://plus.google.com/109281524060750090000?rel=author" title="Renfei.Monster" target="_blank" itemprop="author">Renfei.Monster</a>
     </p>
   <p class="article-time">
-    <time datetime="2015-11-24T11:36:43.000Z" itemprop="datePublished">2015-11-24</time>
-    更新日期:<time datetime="2015-11-24T11:54:38.000Z" itemprop="dateModified">2015-11-24</time>
+    <time datetime="2015-12-03T07:41:17.000Z" itemprop="datePublished">2015-12-03</time>
+    更新日期:<time datetime="2015-12-03T07:43:29.000Z" itemprop="dateModified">2015-12-03</time>
     
   </p>
 </header>
@@ -95,47 +90,10 @@
 		
 		<div id="toc" class="toc-article">
 			<strong class="toc-title">文章目录</strong>
-		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#单机数据库实现——初始化服务器"><span class="toc-number">1.</span> <span class="toc-text">单机数据库实现——初始化服务器</span></a></li></ol>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#多机数据库的实现——复制"><span class="toc-number">1.</span> <span class="toc-text">多机数据库的实现——复制</span></a></li></ol>
 		</div>
 		
-		<h2 id="单机数据库实现——初始化服务器">单机数据库实现——初始化服务器</h2><p><strong>阶段：</strong></p>
-<ul>
-<li>初始化服务器状态结构initServerConfig</li>
-<li>载入服务器配置数据 initServerConfig</li>
-<li>初始化服务器数据结构 initServer</li>
-<li>还原数据库状态RDB或者AOF，如果服务器的AOF持久化开关没打开则使用RDB进行还原，反之使用AOF还原。</li>
-<li>执行事件循环</li>
-</ul>
-<blockquote>
-<p>initServerConfig函数完成工作：</p>
-<ul>
-<li>设置服务器运行id</li>
-<li>设置服务器默认运行频率</li>
-<li>设置服务器默认配置文件路径</li>
-<li>设置服务器的运行结构</li>
-<li>设置服务器默认端口号</li>
-<li>设置服务器默认RDB持久化条件和AOF持久化条件</li>
-<li>设置服务器的LRU时钟</li>
-<li>创建命令表</li>
-</ul>
-</blockquote>
-<p>载入配置选项：</p>
-<blockquote>
-<p>用户可以通过：<br>1、给定配置参数<br>2、给定配置文件<br>来修改服务器的默认配置</p>
-</blockquote>
-<p>initServer初始化服务器数据结构，对以下数据结构分配内存</p>
-<blockquote>
-<ul>
-<li>server.clients链表</li>
-<li>server.db数组</li>
-<li>用来保存频道订阅信息的server.pubsub_channels字典，以及用于保存模式订阅信息的server.pubsub_patterns链表</li>
-<li>用于执行lua脚本的lua环境server.lua</li>
-<li>用于保存慢查询日志的server.slowlog属性</li>
-<li>为服务器设置进程信号处理器</li>
-<li>创建共享对象：创建0-9999的整数共享对象、“OK”、“ERR”回复的字符串对象<br>…</li>
-</ul>
-</blockquote>
-  
+		<h2 id="多机数据库的实现——复制">多机数据库的实现——复制</h2>  
 	</div>
 		<footer class="article-footer clearfix">
 
@@ -144,7 +102,7 @@
 
 <div class="article-share" id="share">
 
-  <div data-url="http://mcdullfei.github.io/2015/11/24/《Redis设计与实现》笔记7/" data-title="《Redis设计与实现》笔记7 | Renfei&#39;s blog" data-tsina="1809365984" class="share clearfix">
+  <div data-url="http://mcdullfei.github.io/2015/12/03/《Redis设计与实现》笔记8/" data-title="《Redis设计与实现》笔记8 | Renfei&#39;s blog" data-tsina="1809365984" class="share clearfix">
   </div>
 
 </div>
@@ -153,19 +111,11 @@
 	
 <nav class="article-nav clearfix">
  
- <div class="prev" >
- <a href="/2015/12/03/《Redis设计与实现》笔记8/" title="《Redis设计与实现》笔记8">
-  <strong>PREVIOUS:</strong><br/>
-  <span>
-  《Redis设计与实现》笔记8</span>
-</a>
-</div>
-
 
 <div class="next">
-<a href="/2015/11/23/《Redis设计与实现》笔记6/"  title="《Redis设计与实现》笔记6">
+<a href="/2015/11/24/《Redis设计与实现》笔记7/"  title="《Redis设计与实现》笔记7">
  <strong>NEXT:</strong><br/> 
- <span>《Redis设计与实现》笔记6
+ <span>《Redis设计与实现》笔记7
 </span>
 </a>
 </div>
@@ -182,7 +132,7 @@
 
   <div id="toc" class="toc-aside">
   <strong class="toc-title">文章目录</strong>
-  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#单机数据库实现——初始化服务器"><span class="toc-number">1.</span> <span class="toc-text">单机数据库实现——初始化服务器</span></a></li></ol>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#多机数据库的实现——复制"><span class="toc-number">1.</span> <span class="toc-text">多机数据库的实现——复制</span></a></li></ol>
   </div>
 
 <div id="asidepart">
