@@ -9,7 +9,11 @@
     
     <meta name="author" content="Renfei.Monster">
     
-    <meta name="description" content="多机数据库的实现——复制">
+    <meta name="description" content="多机数据库的实现——复制通过执行slaveof命令或者设置slaveof选项达到replicate复制服务器的作用
+redis的复制可以分为同步（sync）和命令传播（command propagate）两个操作
+2.8版本之前的复制
+
+同步sync：从服务器发起sync，将从服务器状态更新至主服务">
     
     
     
@@ -81,7 +85,7 @@
     </p>
   <p class="article-time">
     <time datetime="2015-12-03T07:41:17.000Z" itemprop="datePublished">2015-12-03</time>
-    更新日期:<time datetime="2015-12-03T07:43:29.000Z" itemprop="dateModified">2015-12-03</time>
+    更新日期:<time datetime="2015-12-04T11:18:40.000Z" itemprop="dateModified">2015-12-04</time>
     
   </p>
 </header>
@@ -90,10 +94,99 @@
 		
 		<div id="toc" class="toc-article">
 			<strong class="toc-title">文章目录</strong>
-		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#多机数据库的实现——复制"><span class="toc-number">1.</span> <span class="toc-text">多机数据库的实现——复制</span></a></li></ol>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#多机数据库的实现——复制"><span class="toc-number">1.</span> <span class="toc-text">多机数据库的实现——复制</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-8版本之前的复制"><span class="toc-number">1.1.</span> <span class="toc-text">2.8版本之前的复制</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#同步"><span class="toc-number">1.1.1.</span> <span class="toc-text">同步</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#旧版本复制功能缺陷"><span class="toc-number">1.2.</span> <span class="toc-text">旧版本复制功能缺陷</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#新版复制功能"><span class="toc-number">1.3.</span> <span class="toc-text">新版复制功能</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#部分重同步实现"><span class="toc-number">1.3.1.</span> <span class="toc-text">部分重同步实现</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Psync命令实现"><span class="toc-number">1.3.2.</span> <span class="toc-text">Psync命令实现</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#复制的实现"><span class="toc-number">1.4.</span> <span class="toc-text">复制的实现</span></a></li></ol></li></ol>
 		</div>
 		
-		<h2 id="多机数据库的实现——复制">多机数据库的实现——复制</h2>  
+		<h2 id="多机数据库的实现——复制">多机数据库的实现——复制</h2><p><strong>通过执行slaveof命令或者设置slaveof选项达到replicate复制服务器的作用</strong></p>
+<p><strong>redis的复制可以分为同步（sync）和命令传播（command propagate）两个操作</strong></p>
+<h3 id="2-8版本之前的复制">2.8版本之前的复制</h3><blockquote>
+<ul>
+<li>同步sync：从服务器发起sync，将从服务器状态更新至主服务器状态。</li>
+<li>命令传播：主服务器数据库状态被修改时，让主从状态达到一致。</li>
+</ul>
+</blockquote>
+<h4 id="同步">同步</h4><p><strong>内部实现步骤</strong></p>
+<blockquote>
+<ul>
+<li>从服务器向主服务器发送sync</li>
+<li>主服务器收到sync，进行bgsave操作（逻辑和主动bgsave一样，后台生成RDB文件，并在缓冲区中纪录从开始执行bgsave后接受的写命令）。</li>
+<li>主服务器发送rdb文件给从服务器，从服务器执行</li>
+<li>主服务器将缓冲区命令发送给从服务器。此时从服务器更新至主服务器一样的状态。流程如下：</li>
+</ul>
+</blockquote>
+<p><img src="https://raw.githubusercontent.com/McdullFei/blog_source/master/sync1.png" alt="sync1"></p>
+<h3 id="旧版本复制功能缺陷">旧版本复制功能缺陷</h3><p><strong>主要问题断线后无条件执行sync全部重同步，正常在短时间内断线重连后的主服务器只要发送部分命令即可。。。</strong></p>
+<p><strong>sync是一个非常耗资源的命令:参考bgsave，并且还需要占用带宽和i/o</strong></p>
+<h3 id="新版复制功能">新版复制功能</h3><p><strong>psync代替sync,sync被细分为完整重同步和部分重同步两种模式，部分重同步是处理断线后重复制情况的，会将断线后写命令直接发送给从服务器。</strong></p>
+<h4 id="部分重同步实现">部分重同步实现</h4><blockquote>
+<ul>
+<li>组成部分<ul>
+<li>主服务器写命令偏移量和从服务器写命令偏移量</li>
+<li>主服务器的复制积压缓冲区（写命令积压）</li>
+<li>服务器运行ID</li>
+</ul>
+</li>
+<li>复制偏移量：主从复制偏移量做减法，看看偏移量差是多少，判断是rdb还是写命令传播（主要是下面介绍的复制积压缓冲区的偏移量）<br><img src="https://raw.githubusercontent.com/McdullFei/blog_source/master/psync1.png" alt="psync"></li>
+</ul>
+</blockquote>
+<blockquote>
+<ul>
+<li>复制积压缓冲区：由主服务器维护的一个固定长度先进先出队列，默认1MB大小<ul>
+<li>服务器在命令传播时，除了将写命令发送给从服务器（命令传播复制），还会将写命令入队到复制积压缓冲区。</li>
+<li>上面说的偏移量会记录在复制积压缓冲区中：<strong>复制积压缓冲区会为队列中每个字节纪录偏移量，断线服务器的偏移量会跟这里的最小偏移量比较比较。如果小于最小偏移量则进行完整重同步发送rdb文件，如果大于最小偏移量则写命令传播</strong></li>
+<li>积压缓冲区大小是可以调整的，但是需要根据实际情况，一般计算公式：2＊断线后重连主机的平均时间 ＊ 每秒产生的写命令大小，通过修改redis.conf的repl-backlog-size属性来设置。</li>
+</ul>
+</li>
+<li>服务器运行ID<ul>
+<li>主要判断从服务器在断线重连后连接的主服务器是否是断线之前的服务器。从服务器会保存连接的主服务器id。如果发现重连后主服务器id和保存的id不同则直接需要RDb完整同步</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<h4 id="Psync命令实现">Psync命令实现</h4><p><strong>命令格式：psync 从服务器纪录的主服务器id 从服务器偏移量</strong></p>
+<blockquote>
+<p>一张图说明命令执行和相应过程：<br><img src="https://raw.githubusercontent.com/McdullFei/blog_source/master/psync2.png" alt="psync命令实现过程"></p>
+</blockquote>
+<h3 id="复制的实现">复制的实现</h3><blockquote>
+<ul>
+<li>复制主服务器的地址和端口</li>
+<li>建立套接字链接<ul>
+<li>从服务器套接字发送成功，从服务器会将套接字关联一个专门处理复制功能的文件事件处理器</li>
+<li>主服务器接受从服务器的套接字之后，从服务器同时具备服务器和客户端的角色</li>
+</ul>
+</li>
+<li>发送PING命令——主要是测试通信，但通过ping携带的信息可以做其他作用，比如下图：<br><img src="https://raw.githubusercontent.com/McdullFei/blog_source/master/psync3.png" alt="psync ping过程"></li>
+</ul>
+</blockquote>
+<ul>
+<li>身份验证<br><img src="https://raw.githubusercontent.com/McdullFei/blog_source/master/psync-auth.png" alt="psync 身份验证"></li>
+</ul>
+<ul>
+<li>发送端口信息<ul>
+<li><strong>主服务器接受到这个命令后，会将从服务器的端口保存到主服务器的redisClient中。然而到目前为止，这个属性在主服务器上并没有什么鸟用。。。</strong></li>
+</ul>
+</li>
+<li>同步<ul>
+<li>同步时因为主服务器要向从服务器发送命令（完整重同步、部分重同步），所以主服务器会成为从服务器的客户端。<strong>主服务器变从服务器的客户端是主服务器对从服务器执行命令传播的基础</strong></li>
+</ul>
+</li>
+<li>命令传播<ul>
+<li>主服务器将自己接受到的命令发送给从服务器以保持一致状态。</li>
+</ul>
+</li>
+<li><strong>心跳检测</strong><ul>
+<li>命令：replconf ack 从服务器复制偏移量</li>
+<li>从服务器以每秒一次的频率向主服务器发送心跳</li>
+<li>心跳检测作用：用于  <strong>检测命令丢失</strong>  后的命令补发。<br>命令补发 和 部分重同步的逻辑是一样的都是通过比较偏移量然后从复制积压缓冲区找到命令后重新发送给丛服务器，但是执行的前提不一样：<br>两者执行前提区别在是否是断线重连，命令补发主从并没有断线。</li>
+<li>如果主服务器超过一秒钟没有收到从服务器发送的replconf ack 命令说明链接出问题<br>（这里是：主服务器超过一秒没有接受到丛服务器的replconf ack命令说明主从链接异常。<br>而不是：命令发送的从服务器没有接受到主服务器应答，来做判断。<br>这里的通信可能是单向的，http的心跳因为http的通信逻辑，发送者是会收到应答。这里可以在接受者和发送者两者中同时做链接检测。）</li>
+<li>主服务器可以通过 info replication命令信息的lag一栏来查看心跳响应延迟时间。</li>
+<li>加了master－slave后，主服务器必须保证从服务器的最小链接数min-slaves-to-write 和 最小链接数的从服务器最小延迟时间都不超过最大延迟lag时间min-slaves-max-lag。<br>如果超过则主服务器将不执行  写命令。</li>
+<li>检测命令丢失<br>因网络故障而导致的命令丢失，会根据replconf ack 命令携带的偏移量来作出丢失判断，逻辑基本和部分重同步类似。</li>
+</ul>
+</li>
+</ul>
+<p>that is all。</p>
+  
 	</div>
 		<footer class="article-footer clearfix">
 
@@ -132,7 +225,7 @@
 
   <div id="toc" class="toc-aside">
   <strong class="toc-title">文章目录</strong>
-  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#多机数据库的实现——复制"><span class="toc-number">1.</span> <span class="toc-text">多机数据库的实现——复制</span></a></li></ol>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#多机数据库的实现——复制"><span class="toc-number">1.</span> <span class="toc-text">多机数据库的实现——复制</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-8版本之前的复制"><span class="toc-number">1.1.</span> <span class="toc-text">2.8版本之前的复制</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#同步"><span class="toc-number">1.1.1.</span> <span class="toc-text">同步</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#旧版本复制功能缺陷"><span class="toc-number">1.2.</span> <span class="toc-text">旧版本复制功能缺陷</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#新版复制功能"><span class="toc-number">1.3.</span> <span class="toc-text">新版复制功能</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#部分重同步实现"><span class="toc-number">1.3.1.</span> <span class="toc-text">部分重同步实现</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Psync命令实现"><span class="toc-number">1.3.2.</span> <span class="toc-text">Psync命令实现</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#复制的实现"><span class="toc-number">1.4.</span> <span class="toc-text">复制的实现</span></a></li></ol></li></ol>
   </div>
 
 <div id="asidepart">
