@@ -9,11 +9,9 @@
     
     <meta name="author" content="Renfei.Monster">
     
-    <meta name="description" content="#mysql copying to tmp datble on disk状态说明和引起的问题
-##缘起：
+    <meta name="description" content="mysql copying to tmp datble on disk状态说明和引起的问题缘起：
 
-
-最近在处理一个项目中需求场景时，需要并发读mysql，当时在调并发线程数过程中，报出了“  java.sql.SQLException: Incorrect key file for tab">
+最近在处理一个项目中需求场景时，需要并发读mysql，当时在调并发线程数过程中，报出了“  java.sql.SQLException: Incorrect key file for table ‘/">
     
     
     
@@ -85,7 +83,7 @@
     </p>
   <p class="article-time">
     <time datetime="2015-12-09T03:32:23.000Z" itemprop="datePublished">2015-12-09</time>
-    更新日期:<time datetime="2015-12-09T04:55:08.000Z" itemprop="dateModified">2015-12-09</time>
+    更新日期:<time datetime="2015-12-09T04:59:36.000Z" itemprop="dateModified">2015-12-09</time>
     
   </p>
 </header>
@@ -94,12 +92,10 @@
 		
 		<div id="toc" class="toc-article">
 			<strong class="toc-title">文章目录</strong>
-		
+		<ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#mysql_copying_to_tmp_datble_on_disk状态说明和引起的问题"><span class="toc-number">1.</span> <span class="toc-text">mysql copying to tmp datble on disk状态说明和引起的问题</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#缘起："><span class="toc-number">1.1.</span> <span class="toc-text">缘起：</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#状态说明："><span class="toc-number">1.2.</span> <span class="toc-text">状态说明：</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#引起的问题："><span class="toc-number">1.3.</span> <span class="toc-text">引起的问题：</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#解决："><span class="toc-number">1.4.</span> <span class="toc-text">解决：</span></a></li></ol></li></ol>
 		</div>
 		
-		<p>#mysql copying to tmp datble on disk状态说明和引起的问题</p>
-<p>##缘起：</p>
-<blockquote>
+		<h1 id="mysql_copying_to_tmp_datble_on_disk状态说明和引起的问题">mysql copying to tmp datble on disk状态说明和引起的问题</h1><h2 id="缘起：">缘起：</h2><blockquote>
 <ul>
 <li><p>最近在处理一个项目中需求场景时，需要并发读mysql，当时在调并发线程数过程中，报出了“  <strong>java.sql.SQLException: Incorrect key file for table ‘/tmp/#sql_1ab8_6.MYI’; try to repair it</strong>” 的错误，这个错误的基本原因是mysql 磁盘已满。</p>
 </li>
@@ -107,8 +103,7 @@
 </li>
 </ul>
 </blockquote>
-<p>##状态说明：</p>
-<blockquote>
+<h2 id="状态说明：">状态说明：</h2><blockquote>
 <ul>
 <li>mysql控制台 show processlist命令查看连接主机（show processlist经常用于查看慢查询等操作），在state栏偶尔会发现<strong>copying to tmp datble on disk</strong>状态的连接</li>
 <li>这个状态出现的原因是查询数据超出了mysql参数tmp_table_size的限制导致。</li>
@@ -122,16 +117,14 @@
 <li><strong>sending data之后临时表空间会重新释放。</strong></li>
 </ul>
 </blockquote>
-<p>##引起的问题：</p>
-<blockquote>
+<h2 id="引起的问题：">引起的问题：</h2><blockquote>
 <p>当出现copying to tmp datble on disk时很可能会间接引起</p>
 <ul>
 <li>磁盘空间满（磁盘空间不足的情况下）</li>
 <li>I/O超时（time过大，慢查询导致）</li>
 </ul>
 </blockquote>
-<p>##解决：</p>
-<blockquote>
+<h2 id="解决：">解决：</h2><blockquote>
 <p>针对自身项目情况做了如下解决：</p>
 <ul>
 <li>调优连接数据库的并发线程数<ul>
@@ -181,7 +174,7 @@
 
   <div id="toc" class="toc-aside">
   <strong class="toc-title">文章目录</strong>
-  
+  <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#mysql_copying_to_tmp_datble_on_disk状态说明和引起的问题"><span class="toc-number">1.</span> <span class="toc-text">mysql copying to tmp datble on disk状态说明和引起的问题</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#缘起："><span class="toc-number">1.1.</span> <span class="toc-text">缘起：</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#状态说明："><span class="toc-number">1.2.</span> <span class="toc-text">状态说明：</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#引起的问题："><span class="toc-number">1.3.</span> <span class="toc-text">引起的问题：</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#解决："><span class="toc-number">1.4.</span> <span class="toc-text">解决：</span></a></li></ol></li></ol>
   </div>
 
 <div id="asidepart">
