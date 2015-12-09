@@ -1,0 +1,360 @@
+
+ <!DOCTYPE HTML>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  
+    <title>关于mysql copying to tmp datble on disk状态说明和引起的问题 | Renfei&#39;s blog</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="Renfei.Monster">
+    
+    <meta name="description" content="#mysql copying to tmp datble on disk状态说明和引起的问题
+##缘起：
+
+
+最近在处理一个项目中需求场景时，需要并发读mysql，当时在调并发线程数过程中，报出了“  java.sql.SQLException: Incorrect key file for tab">
+    
+    
+    
+    
+    <link rel="alternate" href="http://weibo.com/578522226" title="Renfei&#39;s blog" type="application/atom+xml">
+    
+    
+    <link rel="icon" href="/img/favicon.ico">
+    
+    
+    <link rel="apple-touch-icon" href="/img/pacman.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/pacman.jpg">
+    
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="imglogo">
+				<a href="/"><img src="/img/logo.svg" alt="Renfei&#39;s blog" title="Renfei&#39;s blog"/></a>
+			</div>
+			
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Renfei&#39;s blog">Renfei&#39;s blog</a></h1>
+				<h2 class="blog-motto">Veni,Vedi,Vici</h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="菜单">
+			</a></div>
+			<nav class="animated">
+				<ul>
+					
+						<li><a href="/">Home</a></li>
+					
+						<li><a href="/archives">Archives</a></li>
+					
+						<li><a href="/atom.xml">Rss</a></li>
+					
+						<li><a href="/sitemap.xml">Sitemap</a></li>
+					
+						<li><a href="">简历</a></li>
+					
+					<li>
+					
+					<form class="search" action="//google.com/search" method="get" accept-charset="utf-8">
+						<label>Search</label>
+						<input type="text" id="search" name="q" autocomplete="off" maxlength="20" placeholder="搜索" />
+						<input type="hidden" name="q" value="site:mcdullfei.github.io">
+					</form>
+					
+					</li>
+				</ul>
+			</nav>			
+</div>
+
+    </header>
+    <div id="container">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2015/12/09/关于mysql-copying-to-tmp-datble-on-disk状态说明和引起的问题/" title="关于mysql copying to tmp datble on disk状态说明和引起的问题" itemprop="url">关于mysql copying to tmp datble on disk状态说明和引起的问题</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://plus.google.com/109281524060750090000?rel=author" title="Renfei.Monster" target="_blank" itemprop="author">Renfei.Monster</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2015-12-09T03:32:23.000Z" itemprop="datePublished">2015-12-09</time>
+    更新日期:<time datetime="2015-12-09T04:55:08.000Z" itemprop="dateModified">2015-12-09</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">文章目录</strong>
+		
+		</div>
+		
+		<p>#mysql copying to tmp datble on disk状态说明和引起的问题</p>
+<p>##缘起：</p>
+<blockquote>
+<ul>
+<li><p>最近在处理一个项目中需求场景时，需要并发读mysql，当时在调并发线程数过程中，报出了“  <strong>java.sql.SQLException: Incorrect key file for table ‘/tmp/#sql_1ab8_6.MYI’; try to repair it</strong>” 的错误，这个错误的基本原因是mysql 磁盘已满。</p>
+</li>
+<li><p>后来网络上查询了一下问题，这里稍微总结一下。</p>
+</li>
+</ul>
+</blockquote>
+<p>##状态说明：</p>
+<blockquote>
+<ul>
+<li>mysql控制台 show processlist命令查看连接主机（show processlist经常用于查看慢查询等操作），在state栏偶尔会发现<strong>copying to tmp datble on disk</strong>状态的连接</li>
+<li>这个状态出现的原因是查询数据超出了mysql参数tmp_table_size的限制导致。</li>
+<li>如果查询数据大小<strong>超出tmp_table_size设置的大小</strong>，会进入下面三个状态流程中：<ul>
+<li>mysql首先会将查询数据保存到磁盘的临时表中，而上面的/tmp/#sql_1ab8_6.MYI就是文件保存的相对路径。state＝copying to tmp datble on disk</li>
+<li>其次，当保存完后，会将数据进行排序，state ＝ sorting result</li>
+<li>最后才是将数据发送给客户端，state ＝ sending data</li>
+</ul>
+</li>
+<li>而经过了这三个步骤，也间接的导致了慢查询的产生。</li>
+<li><strong>sending data之后临时表空间会重新释放。</strong></li>
+</ul>
+</blockquote>
+<p>##引起的问题：</p>
+<blockquote>
+<p>当出现copying to tmp datble on disk时很可能会间接引起</p>
+<ul>
+<li>磁盘空间满（磁盘空间不足的情况下）</li>
+<li>I/O超时（time过大，慢查询导致）</li>
+</ul>
+</blockquote>
+<p>##解决：</p>
+<blockquote>
+<p>针对自身项目情况做了如下解决：</p>
+<ul>
+<li>调优连接数据库的并发线程数<ul>
+<li>这里由于某月份表一天数据可能将近150W，故采取了并发多个线程扫表的方式，调整扫表线程数有效利用临时表释放空间的解决方法。</li>
+</ul>
+</li>
+<li>避免直接操作mysql，源数据备份到缓存（比如redis），业务逻辑直接扫缓存。</li>
+<li>修改tmp_table_size参数</li>
+</ul>
+</blockquote>
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="http://mcdullfei.github.io/2015/12/09/关于mysql-copying-to-tmp-datble-on-disk状态说明和引起的问题/" data-title="关于mysql copying to tmp datble on disk状态说明和引起的问题 | Renfei&#39;s blog" data-tsina="1809365984" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2015/12/03/《Redis设计与实现》笔记8/"  title="《Redis设计与实现》笔记8">
+ <strong>NEXT:</strong><br/> 
+ <span>《Redis设计与实现》笔记8
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+<section class="comment">
+	<div class="ds-thread"></div>
+</section>
+
+</div>  
+      <div class="openaside"><a class="navbutton" href="#" title="显示侧边栏"></a></div>
+
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">文章目录</strong>
+  
+  </div>
+
+<div id="asidepart">
+<div class="closeaside"><a class="closebutton" href="#" title="隐藏侧边栏"></a></div>
+<aside class="clearfix">
+
+  
+
+  
+
+  <div class="rsspart">
+	<a href="http://weibo.com/578522226" target="_blank" title="rss">RSS 订阅</a>
+</div>
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+	
+	<div class="line">
+		<span></span>
+		<div class="author"></div>
+	</div>
+	
+	
+	<section class="info">
+		<p> Hello , Weibo follow me. <br/>
+			A man will pay $2 for a $1 item he wants. A woman will pay $1 for a $2 item that she doesn&#39;t want.</p>
+	</section>
+	 
+	<div class="social-font clearfix">
+		
+		<a href="http://weibo.com/1809365984" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/McdullFei" target="_blank" title="github"></a>
+		
+		
+		
+	</div>
+		<p class="copyright">Powered by <a href="http://hexo.io" target="_blank" title="hexo">hexo</a> and Theme by <a href="https://github.com/A-limon/pacman" target="_blank" title="Pacman">Pacman</a> © 2015 
+		
+		<a href="http://mcdullfei.github.io" target="_blank" title="Renfei.Monster">Renfei.Monster</a>
+		
+		</p>
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      o = $('.openaside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      o.css('display', 'none');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+  c.click(function(){
+    a.addClass('fadeOut').css('display', 'none');
+    o.css('display', 'block').addClass('fadeIn');
+    m.addClass('moveMain');
+  });
+  o.click(function(){
+    o.css('display', 'none').removeClass('beforeFadeIn');
+    a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');      
+    m.removeClass('moveMain');
+  });
+  $(window).scroll(function(){
+    o.css("top",Math.max(80,260-$(this).scrollTop()));
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+    c.click(function(){
+      ta.css('display', 'block').addClass('fadeIn');
+    });
+    o.click(function(){
+      ta.css('display', 'none');
+    });
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,320-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"null"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
