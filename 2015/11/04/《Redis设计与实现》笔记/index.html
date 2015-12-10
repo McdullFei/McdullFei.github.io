@@ -82,7 +82,7 @@
     </p>
   <p class="article-time">
     <time datetime="2015-11-04T02:19:01.000Z" itemprop="datePublished">2015-11-04</time>
-    更新日期:<time datetime="2015-11-24T07:19:31.000Z" itemprop="dateModified">2015-11-24</time>
+    更新日期:<time datetime="2015-12-10T08:57:46.000Z" itemprop="dateModified">2015-12-10</time>
     
   </p>
 </header>
@@ -137,6 +137,7 @@
 <p>redis对象空转时常的设计：</p>
 <blockquote>
 <ul>
+<li>LRU:LRU全称是Least Recently Used，即最近最久未使用</li>
 <li>空转时长说白了就是存储对象的空闲时间，redis为了更好的管理内存，在redisObject的lru属性中记录了存储对象最后一次被访问的时间，用OBJECT IDLETIME（OBJECT ENCODING 命令：value的编码、OBJECT REFCOUNT 命令：存值次数）命令就可以打印出key的空闲时间（当前时间－lru）。</li>
 <li>空转时长的作用就是有效管理内存，在redis配置中如果打开了maxmemory选项并且服务器回收算法为：volatile-lru或者是allkeys-lru那么当服务器内存超过maxmemory时，空转时长最大的就会被优先回收、释放。 </li>
 </ul>
