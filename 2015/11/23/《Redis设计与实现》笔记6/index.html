@@ -83,7 +83,7 @@
     </p>
   <p class="article-time">
     <time datetime="2015-11-23T08:27:43.000Z" itemprop="datePublished">2015-11-23</time>
-    更新日期:<time datetime="2015-11-24T10:38:19.000Z" itemprop="dateModified">2015-11-24</time>
+    更新日期:<time datetime="2015-12-10T08:35:09.000Z" itemprop="dateModified">2015-12-10</time>
     
   </p>
 </header>
@@ -102,6 +102,7 @@
 </blockquote>
 <h3 id="更新LRU时钟">更新LRU时钟</h3><blockquote>
 <ul>
+<li>LRU:LRU全称是Least Recently Used，即最近最久未使用</li>
 <li>lru：纪录对象最后一次被访问的时间，每个redisObject中的属性。计算对象的空转时长方式：服务器的lruclock － 对象lru＝对象空转时长。</li>
 <li>当redis达到设置的maxmemcache时会对lru最早的进行回收.</li>
 <li>serverCron函数默认会以每10秒一次的频率更新lruclock属性值。lruclock同为服务器时间缓存的一种，所以这个时钟也不是实时的，从而计算出来的LRU时间也是模糊的。</li>

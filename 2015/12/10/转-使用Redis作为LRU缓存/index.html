@@ -1,0 +1,360 @@
+
+ <!DOCTYPE HTML>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  
+    <title>[转]使用Redis作为LRU缓存 | Renfei&#39;s blog</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="Renfei.Monster">
+    
+    <meta name="description" content="使用Redis作为LRU缓存转自：http://ifeve.com/redis-lru/#more-22547
+如果你使用redis作为缓存，当添加新数据时，若有内存大小等限制，系统默认会根据一定的规则自动清理旧数据。这种处理方式在开发社区中众所周知，因为它也是非常流行的缓存系统 memcached">
+    
+    
+    
+    
+    <link rel="alternate" href="http://weibo.com/578522226" title="Renfei&#39;s blog" type="application/atom+xml">
+    
+    
+    <link rel="icon" href="/img/favicon.ico">
+    
+    
+    <link rel="apple-touch-icon" href="/img/pacman.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/pacman.jpg">
+    
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="imglogo">
+				<a href="/"><img src="/img/logo.svg" alt="Renfei&#39;s blog" title="Renfei&#39;s blog"/></a>
+			</div>
+			
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Renfei&#39;s blog">Renfei&#39;s blog</a></h1>
+				<h2 class="blog-motto">Veni,Vedi,Vici</h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="菜单">
+			</a></div>
+			<nav class="animated">
+				<ul>
+					
+						<li><a href="/">Home</a></li>
+					
+						<li><a href="/archives">Archives</a></li>
+					
+						<li><a href="/atom.xml">Rss</a></li>
+					
+						<li><a href="/sitemap.xml">Sitemap</a></li>
+					
+						<li><a href="">简历</a></li>
+					
+					<li>
+					
+					<form class="search" action="//google.com/search" method="get" accept-charset="utf-8">
+						<label>Search</label>
+						<input type="text" id="search" name="q" autocomplete="off" maxlength="20" placeholder="搜索" />
+						<input type="hidden" name="q" value="site:mcdullfei.github.io">
+					</form>
+					
+					</li>
+				</ul>
+			</nav>			
+</div>
+
+    </header>
+    <div id="container">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2015/12/10/转-使用Redis作为LRU缓存/" title="[转]使用Redis作为LRU缓存" itemprop="url">[转]使用Redis作为LRU缓存</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://plus.google.com/109281524060750090000?rel=author" title="Renfei.Monster" target="_blank" itemprop="author">Renfei.Monster</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2015-12-10T08:34:14.000Z" itemprop="datePublished">2015-12-10</time>
+    更新日期:<time datetime="2015-12-10T08:43:29.000Z" itemprop="dateModified">2015-12-10</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">文章目录</strong>
+		<ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#使用Redis作为LRU缓存"><span class="toc-number">1.</span> <span class="toc-text">使用Redis作为LRU缓存</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#最大内存配置选项"><span class="toc-number">1.1.</span> <span class="toc-text">最大内存配置选项</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#回收策略"><span class="toc-number">1.2.</span> <span class="toc-text">回收策略</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#回收过程"><span class="toc-number">1.3.</span> <span class="toc-text">回收过程</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#近似LRU算法"><span class="toc-number">1.4.</span> <span class="toc-text">近似LRU算法</span></a></li></ol></li></ol>
+		</div>
+		
+		<h1 id="使用Redis作为LRU缓存">使用Redis作为LRU缓存</h1><p><a href="http://ifeve.com/redis-lru/#more-22547" target="_blank" rel="external">转自：http://ifeve.com/redis-lru/#more-22547</a></p>
+<p>如果你使用redis作为缓存，当添加新数据时，若有内存大小等限制，系统默认会根据一定的规则自动清理旧数据。这种处理方式在开发社区中众所周知，因为它也是非常流行的缓存系统 memcached 的默认处理方式。</p>
+<p>LRU（LRU全称是Least Recently Used，即最近最久未使用）实际上只是Redis支持的内存回收策略中的一种。这篇文章将要讲述Redis的 maxmemory 配置选项，该配置选项用来限制 Redis 的内存使用大小，同时深入研究 LRU（确切的说是近似LRU算法） 算法在 Redis 中的应用。</p>
+<h2 id="最大内存配置选项">最大内存配置选项</h2><p>maxmemory 配置选项使用来配置 Redis 的存储数据所能使用的最大内存限制。可以通过在内置文件redis.conf中配置，也可在Redis运行时通过命令CONFIG SET来配置。例如，我们要配置内存上限是100M的Redis缓存，那么我们可以在 redis.conf 配置如下：<br>maxmemory 100mb</p>
+<p>设置 maxmemory 为 0 表示没有内存限制。在 64-bit 系统中，默认是 0 无限制，但是在 32-bit 系统中默认是 3GB。<br>当存储数据达到限制时，Redis 会根据情形选择不同策略，或者返回errors（这样会导致浪费更多的内存），或者清除一些旧数据回收内存来添加新数据。</p>
+<h2 id="回收策略">回收策略</h2><p>当内存达到限制时，Redis 具体的回收策略是通过 maxmemory-policy 配置项配置的。</p>
+<p>以下的策略都是可用的：</p>
+<ul>
+<li>noenviction：不清除数据，只是返回错误，这样会导致浪费掉更多的内存，对大多数写命令（DEL 命令和其他的少数命令例外）</li>
+<li>allkeys-lru：从所有的数据集（server.db[i].dict）中挑选最近最少使用的数据淘汰，以供新数据使用</li>
+<li>volatile-lru：从已设置过期时间的数据集（server.db[i].expires）中挑选最近最少使用的数据淘汰，以供新数据使用</li>
+<li>allkeys-random：从所有数据集（server.db[i].dict）中任意选择数据淘汰，以供新数据使用</li>
+<li>volatile-random：从已设置过期时间的数据集（server.db[i].expires）中任意选择数据淘汰，以供新数据使用</li>
+<li>volatile-ttl：从已设置过期时间的数据集（server.db[i].expires）中挑选将要过期的数据淘汰，以供新数据使用</li>
+</ul>
+<p>当 cache 中没有符合清除条件的 key 时，回收策略 volatile-lru, volatile-random 和volatile-ttl 将会和 策略 noeviction 一样返回错误。选择正确的回收策略是很重要的，取决于你的应用程序的访问模式。但是，你可以在程序运行时重新配置策略，使用 INFO 输出来监控缓存命中和错过的次数，以调优你的设置。</p>
+<p>普适经验规则：</p>
+<ul>
+<li>如果期望用户请求呈现幂律分布(power-law distribution)，也就是，期望一部分子集元素被访问得远比其他元素多时，可以使用allkeys-lru策略。在你不确定时这是一个好的选择。</li>
+<li>如果期望是循环周期的访问，所有的键被连续扫描，或者期望请求符合平均分布(每个元素以相同的概率被访问)，可以使用allkeys-random策略。</li>
+<li>如果你期望能让 Redis 通过使用你创建缓存对象的时候设置的TTL值，确定哪些对象应该是较好的清除候选项，可以使用volatile-ttl策略。</li>
+</ul>
+<p>当你想使用单个Redis实例来实现缓存和持久化一些键，allkeys-lru和volatile-random策略会很有用。但是，通常最好是运行两个Redis实例来解决这个问题。</p>
+<p>另外值得注意的是，为键设置过期时间需要消耗内存，所以使用像allkeys-lru这样的策略会更高效，因为在内存压力下没有必要为键的回收设置过期时间。</p>
+<h2 id="回收过程">回收过程</h2><p>理解回收过程是运作流程非常的重要，回收过程如下：</p>
+<ul>
+<li>一个客户端运行一个新命令，添加了新数据。</li>
+<li>Redis检查内存使用情况，如果大于maxmemory限制，根据策略来回收键。</li>
+<li>一个新的命令被执行，如此等等。</li>
+</ul>
+<p>我们添加数据时通过检查，然后回收键以返回到限制以下，来连续不断的穿越内存限制的边界。<br>如果一个命令导致大量的内存被占用(比如一个很大的集合保存到一个新的键)，那么内存限制很快就会被这个明显的内存量所超越。</p>
+<h2 id="近似LRU算法">近似LRU算法</h2><p>Redis的LRU算法不是一个严格的LRU实现。这意味着Redis不能选择最佳候选键来回收，也就是最久未被访问的那些键。相反，Redis 会尝试执行一个近似的LRU算法，通过采样一小部分键，然后在采样键中回收最适合(拥有最久访问时间)的那个。</p>
+<p>然而，从Redis3.0开始，算法被改进为维护一个回收候选键池。这改善了算法的性能，使得更接近于真实的LRU算法的行为。Redis的LRU算法有一点很重要，你可以调整算法的精度，通过改变每次回收时检查的采样数量。</p>
+<p>这个参数可以通过如下配置指令：</p>
+<p>maxmemory-samples 5</p>
+<p>Redis没有使用真实的LRU实现的原因，是因为这会消耗更多的内存。然而，近似值对使用Redis的应用来说基本上也是等价的。下面的图形对比，为Redis使用的LRU近似值和真实LRU之间的比较。</p>
+<p><img src="http://ifeve.com/wp-content/uploads/2015/11/687474703a2f2f72656469732e696f2f696d616765732f7265646973646f632f6c72755f636f6d70617269736f6e2e706e67.png" alt="tu"></p>
+<p>用于测试生成了上面图像的Redis服务被填充了指定数量的键。键被从头访问到尾，所以第一个键是LRU算法的最佳候选回收键。然后，再新添加50%的键，强制一般的旧键被回收。</p>
+<p>你可以从图中看到三种不同的原点，形成三个不同的带。</p>
+<ul>
+<li>浅灰色带是被回收的对象</li>
+<li>灰色带是没有被回收的对象</li>
+<li>绿色带是被添加的对象</li>
+</ul>
+<p>在理论的LRU实现中，我们期望看到的是，在旧键中第一半会过期。而Redis的LRU算法则只是概率性的过期这些旧键。 你可以看到，同样使用5个采样点，Redis 3.0表现得比Redis 2.8要好，Redis 2.8中最近被访问的对象之间的对象仍然被保留。在Redis 3.0中使用10为采样大小，近似值已经非常接近理论性能。</p>
+<p>注意，LRU只是一个预测模型用来指定键在未来如何被访问。另外，如果你的数据访问模式非常接近幂律，大多数的访问都将集中在一个集合中，LRU近似算法将能处理得很好。</p>
+<p>在模拟实验的过程中，我们发现使用幂律访问模式，真实的LRU算法和Redis的近似算法之间的差异非常小，或者根本就没有。然而，你可以提高采样大小到10，这会消耗额外的CPU，来更加近似于真实的LRU算法，看看这会不会使你的缓存错失率有差异。</p>
+<p>使用CONFIG SET maxmemory-samples <count>命令在生产环境上试验各种不同的采样大小值是很简单的。</count></p>
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="http://mcdullfei.github.io/2015/12/10/转-使用Redis作为LRU缓存/" data-title="[转]使用Redis作为LRU缓存 | Renfei&#39;s blog" data-tsina="1809365984" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2015/12/09/关于mysql-copying-to-tmp-datble-on-disk状态说明和引起的问题/"  title="关于mysql copying to tmp datble on disk状态说明和引起的问题">
+ <strong>NEXT:</strong><br/> 
+ <span>关于mysql copying to tmp datble on disk状态说明和引起的问题
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+<section class="comment">
+	<div class="ds-thread"></div>
+</section>
+
+</div>  
+      <div class="openaside"><a class="navbutton" href="#" title="显示侧边栏"></a></div>
+
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">文章目录</strong>
+  <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#使用Redis作为LRU缓存"><span class="toc-number">1.</span> <span class="toc-text">使用Redis作为LRU缓存</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#最大内存配置选项"><span class="toc-number">1.1.</span> <span class="toc-text">最大内存配置选项</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#回收策略"><span class="toc-number">1.2.</span> <span class="toc-text">回收策略</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#回收过程"><span class="toc-number">1.3.</span> <span class="toc-text">回收过程</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#近似LRU算法"><span class="toc-number">1.4.</span> <span class="toc-text">近似LRU算法</span></a></li></ol></li></ol>
+  </div>
+
+<div id="asidepart">
+<div class="closeaside"><a class="closebutton" href="#" title="隐藏侧边栏"></a></div>
+<aside class="clearfix">
+
+  
+
+  
+
+  <div class="rsspart">
+	<a href="http://weibo.com/578522226" target="_blank" title="rss">RSS 订阅</a>
+</div>
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+	
+	<div class="line">
+		<span></span>
+		<div class="author"></div>
+	</div>
+	
+	
+	<section class="info">
+		<p> Hello , Weibo follow me. <br/>
+			A man will pay $2 for a $1 item he wants. A woman will pay $1 for a $2 item that she doesn&#39;t want.</p>
+	</section>
+	 
+	<div class="social-font clearfix">
+		
+		<a href="http://weibo.com/1809365984" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/McdullFei" target="_blank" title="github"></a>
+		
+		
+		
+	</div>
+		<p class="copyright">Powered by <a href="http://hexo.io" target="_blank" title="hexo">hexo</a> and Theme by <a href="https://github.com/A-limon/pacman" target="_blank" title="Pacman">Pacman</a> © 2015 
+		
+		<a href="http://mcdullfei.github.io" target="_blank" title="Renfei.Monster">Renfei.Monster</a>
+		
+		</p>
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      o = $('.openaside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      o.css('display', 'none');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+  c.click(function(){
+    a.addClass('fadeOut').css('display', 'none');
+    o.css('display', 'block').addClass('fadeIn');
+    m.addClass('moveMain');
+  });
+  o.click(function(){
+    o.css('display', 'none').removeClass('beforeFadeIn');
+    a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');      
+    m.removeClass('moveMain');
+  });
+  $(window).scroll(function(){
+    o.css("top",Math.max(80,260-$(this).scrollTop()));
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+    c.click(function(){
+      ta.css('display', 'block').addClass('fadeIn');
+    });
+    o.click(function(){
+      ta.css('display', 'none');
+    });
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,320-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"null"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
