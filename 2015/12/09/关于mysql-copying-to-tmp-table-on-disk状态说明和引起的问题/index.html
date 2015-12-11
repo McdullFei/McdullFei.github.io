@@ -83,7 +83,7 @@
     </p>
   <p class="article-time">
     <time datetime="2015-12-09T03:32:23.000Z" itemprop="datePublished">2015-12-09</time>
-    更新日期:<time datetime="2015-12-11T06:38:33.000Z" itemprop="dateModified">2015-12-11</time>
+    更新日期:<time datetime="2015-12-11T06:54:21.000Z" itemprop="dateModified">2015-12-11</time>
     
   </p>
 </header>
@@ -109,7 +109,9 @@
 </ul>
 </blockquote>
 <ul>
-<li><p>copying to tmp table on disk和copying to tmp table是两个不同状态一个向磁盘<br>临时目录写，一个不会。临界值取决于tmp_table_size</p>
+<li><p>copying to tmp table on disk和copying to tmp table是两个不同状态一个向磁盘<br>临时目录写，一个不会。临界值取决于tmp_table_sizes属性大小，如果超过上限会将数据写到磁盘上，从而会有物理磁盘的读写操作，导致影响性能。</p>
+</li>
+<li><p>查看和设置tmp_table_sizes命令：SHOW VARIABLES LIKE ‘tmp_table_size%’;和SET GLOBAL tmp_table_size=100000000;</p>
 </li>
 <li><p>这个状态出现的原因是查询数据超出了mysql参数tmp_table_size的限制导致。</p>
 </li>
