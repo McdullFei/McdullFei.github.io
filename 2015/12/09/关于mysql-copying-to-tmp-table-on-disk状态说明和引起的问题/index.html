@@ -4,14 +4,14 @@
 <head>
   <meta charset="UTF-8">
   
-    <title>关于mysql copying to tmp datble on disk状态说明和引起的问题 | Renfei&#39;s blog</title>
+    <title>关于mysql copying to tmp table on disk状态说明和引起的问题 | Renfei&#39;s blog</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
     
     <meta name="author" content="Renfei.Monster">
     
-    <meta name="description" content="mysql copying to tmp datble on disk状态说明和引起的问题缘起：
+    <meta name="description" content="mysql copying to tmp table on disk状态说明和引起的问题缘起：
 
-最近在处理一个项目中需求场景时，需要并发读mysql，当时在调并发线程数过程中，报出了“  java.sql.SQLException: Incorrect key file for table ‘/">
+最近在处理一个项目中需求场景时，需要并发读mysql，当时在调并发线程数过程中，报出了“  java.sql.SQLException: Incorrect key file for table ‘/t">
     
     
     
@@ -75,7 +75,7 @@
 		<header class="article-info clearfix">
   <h1 itemprop="name">
     
-      <a href="/2015/12/09/关于mysql-copying-to-tmp-datble-on-disk状态说明和引起的问题/" title="关于mysql copying to tmp datble on disk状态说明和引起的问题" itemprop="url">关于mysql copying to tmp datble on disk状态说明和引起的问题</a>
+      <a href="/2015/12/09/关于mysql-copying-to-tmp-table-on-disk状态说明和引起的问题/" title="关于mysql copying to tmp table on disk状态说明和引起的问题" itemprop="url">关于mysql copying to tmp table on disk状态说明和引起的问题</a>
   </h1>
   <p class="article-author">By
     
@@ -83,7 +83,7 @@
     </p>
   <p class="article-time">
     <time datetime="2015-12-09T03:32:23.000Z" itemprop="datePublished">2015-12-09</time>
-    更新日期:<time datetime="2015-12-09T06:32:11.000Z" itemprop="dateModified">2015-12-09</time>
+    更新日期:<time datetime="2015-12-11T06:38:33.000Z" itemprop="dateModified">2015-12-11</time>
     
   </p>
 </header>
@@ -92,10 +92,10 @@
 		
 		<div id="toc" class="toc-article">
 			<strong class="toc-title">文章目录</strong>
-		<ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#mysql_copying_to_tmp_datble_on_disk状态说明和引起的问题"><span class="toc-number">1.</span> <span class="toc-text">mysql copying to tmp datble on disk状态说明和引起的问题</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#缘起："><span class="toc-number">1.1.</span> <span class="toc-text">缘起：</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#状态说明："><span class="toc-number">1.2.</span> <span class="toc-text">状态说明：</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#引起的问题："><span class="toc-number">1.3.</span> <span class="toc-text">引起的问题：</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#解决："><span class="toc-number">1.4.</span> <span class="toc-text">解决：</span></a></li></ol></li></ol>
+		<ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#mysql_copying_to_tmp_table_on_disk状态说明和引起的问题"><span class="toc-number">1.</span> <span class="toc-text">mysql copying to tmp table on disk状态说明和引起的问题</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#缘起："><span class="toc-number">1.1.</span> <span class="toc-text">缘起：</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#状态说明："><span class="toc-number">1.2.</span> <span class="toc-text">状态说明：</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#引起的问题："><span class="toc-number">1.3.</span> <span class="toc-text">引起的问题：</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#解决："><span class="toc-number">1.4.</span> <span class="toc-text">解决：</span></a></li></ol></li></ol>
 		</div>
 		
-		<h1 id="mysql_copying_to_tmp_datble_on_disk状态说明和引起的问题">mysql copying to tmp datble on disk状态说明和引起的问题</h1><h2 id="缘起：">缘起：</h2><blockquote>
+		<h1 id="mysql_copying_to_tmp_table_on_disk状态说明和引起的问题">mysql copying to tmp table on disk状态说明和引起的问题</h1><h2 id="缘起：">缘起：</h2><blockquote>
 <ul>
 <li><p>最近在处理一个项目中需求场景时，需要并发读mysql，当时在调并发线程数过程中，报出了“  <strong>java.sql.SQLException: Incorrect key file for table ‘/tmp/#sql_1ab8_6.MYI’; try to repair it</strong>” 的错误，这个错误的基本原因是mysql 磁盘已满。</p>
 </li>
@@ -105,21 +105,26 @@
 </blockquote>
 <h2 id="状态说明：">状态说明：</h2><blockquote>
 <ul>
-<li>mysql控制台 show processlist命令查看连接主机（show processlist经常用于查看慢查询等操作），在state栏偶尔会发现<strong>copying to tmp datble on disk</strong>状态的连接</li>
-<li>这个状态出现的原因是查询数据超出了mysql参数tmp_table_size的限制导致。</li>
+<li>mysql控制台 show processlist命令查看连接主机（show processlist经常用于查看慢查询等操作），在state栏偶尔会发现<strong>copying to tmp table on disk</strong>状态的连接</li>
+</ul>
+</blockquote>
+<ul>
+<li><p>copying to tmp table on disk和copying to tmp table是两个不同状态一个向磁盘<br>临时目录写，一个不会。临界值取决于tmp_table_size</p>
+</li>
+<li><p>这个状态出现的原因是查询数据超出了mysql参数tmp_table_size的限制导致。</p>
+</li>
 <li>如果查询数据大小<strong>超出tmp_table_size设置的大小</strong>，会进入下面三个状态流程中：<ul>
-<li>mysql首先会将查询数据保存到磁盘的临时表中，而上面的/tmp/#sql_1ab8_6.MYI就是文件保存的相对路径。state＝copying to tmp datble on disk</li>
+<li>mysql首先会将查询数据保存到磁盘的临时表中，而上面的/tmp/#sql_1ab8_6.MYI就是文件保存的绝对路径。state＝copying to tmp table on disk</li>
 <li>其次，当保存完后，会将数据进行排序，state ＝ sorting result</li>
 <li>最后才是将数据发送给客户端，state ＝ sending data</li>
 </ul>
 </li>
-<li>而经过了这三个步骤，也间接的导致了慢查询的产生。</li>
-<li><strong>sending data之后临时表空间会重新释放。 state = removing tmp table</strong></li>
-<li><strong>未超出tmp_table_size大小的查询会直接进入sending data状态。</strong></li>
+<li>而经过了这三个步骤，也间接的导致了慢查询的产生。所以查询语句最好不要出现“copying to tmp table on disk”状态</li>
+<li><strong>sending data之后临时表空间会重新释放，tmp目录下的文件会被rm掉。 state = removing tmp table</strong></li>
+<li><strong>未超出tmp_table_size大小的查询一般会直接进入sending data状态（也会出现copying to tmp table状态但是不想磁盘写）。</strong></li>
 </ul>
-</blockquote>
 <h2 id="引起的问题：">引起的问题：</h2><blockquote>
-<p>当出现copying to tmp datble on disk时很可能会间接引起</p>
+<p>当出现copying to tmp table on disk时很可能会间接引起</p>
 <ul>
 <li>磁盘空间满（磁盘空间不足的情况下）</li>
 <li>I/O超时（time过大，慢查询导致）</li>
@@ -129,7 +134,7 @@
 <p>针对自身项目情况做了如下解决：</p>
 <ul>
 <li>调优连接数据库的并发线程数<ul>
-<li>这里由于某月份表一天数据可能将近150W，故采取了并发多个线程扫表的方式，调整扫表线程数有效利用临时表释放空间的解决方法。</li>
+<li>这里由于某月份表一天数据可能将近150W，故采取了并发多个线程扫表的方式，调整扫表线程数有效利用临时表释放空间的解决方法。或者每个线程获取一定少数据直接绕过copying to tmp table on disk状态</li>
 </ul>
 </li>
 <li>避免直接操作mysql，源数据备份到缓存（比如redis），业务逻辑直接扫缓存。</li>
@@ -145,7 +150,7 @@
 
 <div class="article-share" id="share">
 
-  <div data-url="http://mcdullfei.github.io/2015/12/09/关于mysql-copying-to-tmp-datble-on-disk状态说明和引起的问题/" data-title="关于mysql copying to tmp datble on disk状态说明和引起的问题 | Renfei&#39;s blog" data-tsina="1809365984" class="share clearfix">
+  <div data-url="http://mcdullfei.github.io/2015/12/09/关于mysql-copying-to-tmp-table-on-disk状态说明和引起的问题/" data-title="关于mysql copying to tmp table on disk状态说明和引起的问题 | Renfei&#39;s blog" data-tsina="1809365984" class="share clearfix">
   </div>
 
 </div>
@@ -183,7 +188,7 @@
 
   <div id="toc" class="toc-aside">
   <strong class="toc-title">文章目录</strong>
-  <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#mysql_copying_to_tmp_datble_on_disk状态说明和引起的问题"><span class="toc-number">1.</span> <span class="toc-text">mysql copying to tmp datble on disk状态说明和引起的问题</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#缘起："><span class="toc-number">1.1.</span> <span class="toc-text">缘起：</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#状态说明："><span class="toc-number">1.2.</span> <span class="toc-text">状态说明：</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#引起的问题："><span class="toc-number">1.3.</span> <span class="toc-text">引起的问题：</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#解决："><span class="toc-number">1.4.</span> <span class="toc-text">解决：</span></a></li></ol></li></ol>
+  <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#mysql_copying_to_tmp_table_on_disk状态说明和引起的问题"><span class="toc-number">1.</span> <span class="toc-text">mysql copying to tmp table on disk状态说明和引起的问题</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#缘起："><span class="toc-number">1.1.</span> <span class="toc-text">缘起：</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#状态说明："><span class="toc-number">1.2.</span> <span class="toc-text">状态说明：</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#引起的问题："><span class="toc-number">1.3.</span> <span class="toc-text">引起的问题：</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#解决："><span class="toc-number">1.4.</span> <span class="toc-text">解决：</span></a></li></ol></li></ol>
   </div>
 
 <div id="asidepart">
