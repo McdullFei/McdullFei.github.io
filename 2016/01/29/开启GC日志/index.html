@@ -4,12 +4,12 @@
 <head>
   <meta charset="UTF-8">
   
-    <title>GC配置 | Renfei&#39;s blog</title>
+    <title>开启GC日志 | Renfei&#39;s blog</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
     
     <meta name="author" content="Renfei.Monster">
     
-    <meta name="description" content="GC配置转自：http://www.cnblogs.com/ggjucheng/p/3977384.html">
+    <meta name="description" content="JVM的GC日志的主要参数：-XX:+PrintGC 输出GC日志-XX:+PrintGCDetails 输出GC的详细日志-XX:+PrintGCTimeStamps 输出GC的时间戳（以基准时间的形式）-XX:+PrintGCDateStamps 输出GC的时间戳（以日期的形式，如 2013-0">
     
     
     
@@ -73,15 +73,15 @@
 		<header class="article-info clearfix">
   <h1 itemprop="name">
     
-      <a href="/2016/01/29/GC配置/" title="GC配置" itemprop="url">GC配置</a>
+      <a href="/2016/01/29/开启GC日志/" title="开启GC日志" itemprop="url">开启GC日志</a>
   </h1>
   <p class="article-author">By
     
       <a href="https://plus.google.com/109281524060750090000?rel=author" title="Renfei.Monster" target="_blank" itemprop="author">Renfei.Monster</a>
     </p>
   <p class="article-time">
-    <time datetime="2016-01-29T07:11:08.000Z" itemprop="datePublished">2016-01-29</time>
-    更新日期:<time datetime="2016-01-29T07:12:40.000Z" itemprop="dateModified">2016-01-29</time>
+    <time datetime="2016-01-29T09:03:08.000Z" itemprop="datePublished">2016-01-29</time>
+    更新日期:<time datetime="2016-01-29T09:04:27.000Z" itemprop="dateModified">2016-01-29</time>
     
   </p>
 </header>
@@ -90,10 +90,13 @@
 		
 		<div id="toc" class="toc-article">
 			<strong class="toc-title">文章目录</strong>
-		<ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#GC配置"><span class="toc-number">1.</span> <span class="toc-text">GC配置</span></a></li></ol>
+		<ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#JVM的GC日志的主要参数："><span class="toc-number">1.</span> <span class="toc-text">JVM的GC日志的主要参数：</span></a></li></ol>
 		</div>
 		
-		<h1 id="GC配置">GC配置</h1><p><a href="http://www.cnblogs.com/ggjucheng/p/3977384.html" target="_blank" rel="external">转自：http://www.cnblogs.com/ggjucheng/p/3977384.html</a></p>
+		<h1 id="JVM的GC日志的主要参数：">JVM的GC日志的主要参数：</h1><p>-XX:+PrintGC 输出GC日志<br>-XX:+PrintGCDetails 输出GC的详细日志<br>-XX:+PrintGCTimeStamps 输出GC的时间戳（以基准时间的形式）<br>-XX:+PrintGCDateStamps 输出GC的时间戳（以日期的形式，如 2013-05-04T21:53:59.234+0800）<br>-XX:+PrintHeapAtGC 在进行GC的前后打印出堆的信息<br>-Xloggc:../logs/gc.log 日志文件的输出路径</p>
+<blockquote>
+<p>-XX:+PrintGCDetails -Xloggc:../logs/gc.log -XX:+PrintGCTimeStamps </p>
+</blockquote>
   
 	</div>
 		<footer class="article-footer clearfix">
@@ -103,7 +106,7 @@
 
 <div class="article-share" id="share">
 
-  <div data-url="http://mcdullfei.github.io/2016/01/29/GC配置/" data-title="GC配置 | Renfei&#39;s blog" data-tsina="1809365984" class="share clearfix">
+  <div data-url="http://mcdullfei.github.io/2016/01/29/开启GC日志/" data-title="开启GC日志 | Renfei&#39;s blog" data-tsina="1809365984" class="share clearfix">
   </div>
 
 </div>
@@ -112,19 +115,11 @@
 	
 <nav class="article-nav clearfix">
  
- <div class="prev" >
- <a href="/2016/01/29/开启GC日志/" title="开启GC日志">
-  <strong>PREVIOUS:</strong><br/>
-  <span>
-  开启GC日志</span>
-</a>
-</div>
-
 
 <div class="next">
-<a href="/2016/01/27/［转］Redis事务介绍/"  title="［转］Redis事务介绍">
+<a href="/2016/01/29/GC配置/"  title="GC配置">
  <strong>NEXT:</strong><br/> 
- <span>［转］Redis事务介绍
+ <span>GC配置
 </span>
 </a>
 </div>
@@ -141,7 +136,7 @@
 
   <div id="toc" class="toc-aside">
   <strong class="toc-title">文章目录</strong>
-  <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#GC配置"><span class="toc-number">1.</span> <span class="toc-text">GC配置</span></a></li></ol>
+  <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#JVM的GC日志的主要参数："><span class="toc-number">1.</span> <span class="toc-text">JVM的GC日志的主要参数：</span></a></li></ol>
   </div>
 
 <div id="asidepart">
