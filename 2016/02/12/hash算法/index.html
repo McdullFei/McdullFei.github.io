@@ -4,13 +4,14 @@
 <head>
   <meta charset="UTF-8">
   
-    <title>[转]还算靠谱的两片关于gc的文章 | Renfei&#39;s blog</title>
+    <title>hash算法 | Renfei&#39;s blog</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
     
     <meta name="author" content="Renfei.Monster">
     
-    <meta name="description" content="Java GC的工作原理+Minor GC、FullGC转自：http://www.blogjava.net/ldwblog/archive/2013/07/24/401919.html
-触发JVM进行Full GC的情况转自：http://blog.csdn.net/chenleixing/art">
+    <meta name="description" content="比较详尽的hash算法介绍：
+
+转自：http://www.cnblogs.com/wangjy/archive/2011/09/08/2171638.html">
     
     
     
@@ -74,15 +75,15 @@
 		<header class="article-info clearfix">
   <h1 itemprop="name">
     
-      <a href="/2016/02/01/转-还算靠谱的两片关于gc的文章/" title="[转]还算靠谱的两片关于gc的文章" itemprop="url">[转]还算靠谱的两片关于gc的文章</a>
+      <a href="/2016/02/12/hash算法/" title="hash算法" itemprop="url">hash算法</a>
   </h1>
   <p class="article-author">By
     
       <a href="https://plus.google.com/109281524060750090000?rel=author" title="Renfei.Monster" target="_blank" itemprop="author">Renfei.Monster</a>
     </p>
   <p class="article-time">
-    <time datetime="2016-02-01T03:24:49.000Z" itemprop="datePublished">2016-02-01</time>
-    更新日期:<time datetime="2016-02-01T03:28:18.000Z" itemprop="dateModified">2016-02-01</time>
+    <time datetime="2016-02-12T09:16:20.000Z" itemprop="datePublished">2016-02-12</time>
+    更新日期:<time datetime="2016-02-12T09:17:59.000Z" itemprop="dateModified">2016-02-12</time>
     
   </p>
 </header>
@@ -91,11 +92,13 @@
 		
 		<div id="toc" class="toc-article">
 			<strong class="toc-title">文章目录</strong>
-		<ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#Java_GC的工作原理+Minor_GC、FullGC"><span class="toc-number">1.</span> <span class="toc-text">Java GC的工作原理+Minor GC、FullGC</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#触发JVM进行Full_GC的情况"><span class="toc-number">2.</span> <span class="toc-text">触发JVM进行Full GC的情况</span></a></li></ol>
+		
 		</div>
 		
-		<h1 id="Java_GC的工作原理+Minor_GC、FullGC">Java GC的工作原理+Minor GC、FullGC</h1><p><a href="http://www.blogjava.net/ldwblog/archive/2013/07/24/401919.html" target="_blank" rel="external">转自：http://www.blogjava.net/ldwblog/archive/2013/07/24/401919.html</a></p>
-<h1 id="触发JVM进行Full_GC的情况">触发JVM进行Full GC的情况</h1><p><a href="http://blog.csdn.net/chenleixing/article/details/46706039" target="_blank" rel="external">转自：http://blog.csdn.net/chenleixing/article/details/46706039</a></p>
+		<blockquote>
+<p>比较详尽的hash算法介绍：</p>
+</blockquote>
+<p><a href="http://www.cnblogs.com/wangjy/archive/2011/09/08/2171638.html" target="_blank" rel="external">转自：http://www.cnblogs.com/wangjy/archive/2011/09/08/2171638.html</a></p>
   
 	</div>
 		<footer class="article-footer clearfix">
@@ -105,7 +108,7 @@
 
 <div class="article-share" id="share">
 
-  <div data-url="http://mcdullfei.github.io/2016/02/01/转-还算靠谱的两片关于gc的文章/" data-title="[转]还算靠谱的两片关于gc的文章 | Renfei&#39;s blog" data-tsina="1809365984" class="share clearfix">
+  <div data-url="http://mcdullfei.github.io/2016/02/12/hash算法/" data-title="hash算法 | Renfei&#39;s blog" data-tsina="1809365984" class="share clearfix">
   </div>
 
 </div>
@@ -114,19 +117,11 @@
 	
 <nav class="article-nav clearfix">
  
- <div class="prev" >
- <a href="/2016/02/12/hash算法/" title="hash算法">
-  <strong>PREVIOUS:</strong><br/>
-  <span>
-  hash算法</span>
-</a>
-</div>
-
 
 <div class="next">
-<a href="/2016/01/29/开启GC日志/"  title="开启GC日志">
+<a href="/2016/02/01/转-还算靠谱的两片关于gc的文章/"  title="[转]还算靠谱的两片关于gc的文章">
  <strong>NEXT:</strong><br/> 
- <span>开启GC日志
+ <span>[转]还算靠谱的两片关于gc的文章
 </span>
 </a>
 </div>
@@ -143,7 +138,7 @@
 
   <div id="toc" class="toc-aside">
   <strong class="toc-title">文章目录</strong>
-  <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#Java_GC的工作原理+Minor_GC、FullGC"><span class="toc-number">1.</span> <span class="toc-text">Java GC的工作原理+Minor GC、FullGC</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#触发JVM进行Full_GC的情况"><span class="toc-number">2.</span> <span class="toc-text">触发JVM进行Full GC的情况</span></a></li></ol>
+  
   </div>
 
 <div id="asidepart">
