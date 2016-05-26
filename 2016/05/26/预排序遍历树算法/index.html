@@ -4,12 +4,14 @@
 <head>
   <meta charset="UTF-8">
   
-    <title>转-性能优化模式 | Renfei&#39;s blog</title>
+    <title>预排序遍历树算法 | Renfei&#39;s blog</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
     
     <meta name="author" content="Renfei.Monster">
     
-    <meta name="description" content="性能优化模式转自：http://tech.meituan.com/performance_tuning_pattern.html">
+    <meta name="description" content="预排序遍历树算法
+如题所示，这是一种为查询而生的遍历树算法，如果业务需求要求查询的场景高于、多于增删改，可以考虑此算法，该算法会牺牲掉一些插入、删除的性能。
+算法简单概括：类二叉树先序遍历，将树上的每个节点标示left、right、level、parent属性（parent可以更方便画出树结构），查">
     
     
     
@@ -73,15 +75,15 @@
 		<header class="article-info clearfix">
   <h1 itemprop="name">
     
-      <a href="/2016/05/13/转-性能优化模式/" title="转-性能优化模式" itemprop="url">转-性能优化模式</a>
+      <a href="/2016/05/26/预排序遍历树算法/" title="预排序遍历树算法" itemprop="url">预排序遍历树算法</a>
   </h1>
   <p class="article-author">By
     
       <a href="https://plus.google.com/109281524060750090000?rel=author" title="Renfei.Monster" target="_blank" itemprop="author">Renfei.Monster</a>
     </p>
   <p class="article-time">
-    <time datetime="2016-05-13T08:43:19.000Z" itemprop="datePublished">2016-05-13</time>
-    更新日期:<time datetime="2016-05-13T08:44:13.000Z" itemprop="dateModified">2016-05-13</time>
+    <time datetime="2016-05-26T06:34:47.000Z" itemprop="datePublished">2016-05-26</time>
+    更新日期:<time datetime="2016-05-26T07:32:51.000Z" itemprop="dateModified">2016-05-26</time>
     
   </p>
 </header>
@@ -90,10 +92,33 @@
 		
 		<div id="toc" class="toc-article">
 			<strong class="toc-title">文章目录</strong>
-		<ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#性能优化模式"><span class="toc-number">1.</span> <span class="toc-text">性能优化模式</span></a></li></ol>
+		<ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#预排序遍历树算法"><span class="toc-number">1.</span> <span class="toc-text">预排序遍历树算法</span></a></li></ol>
 		</div>
 		
-		<h1 id="性能优化模式">性能优化模式</h1><p><a href="http://tech.meituan.com/performance_tuning_pattern.html" target="_blank" rel="external">转自：http://tech.meituan.com/performance_tuning_pattern.html</a></p>
+		<h1 id="预排序遍历树算法">预排序遍历树算法</h1><hr>
+<p>如题所示，这是一种为查询而生的遍历树算法，如果业务需求要求查询的场景高于、多于增删改，可以考虑此算法，该算法会牺牲掉一些插入、删除的性能。</p>
+<p>算法简单概括：类<strong>二叉树先序遍历</strong>，将树上的每个节点标示left、right、level、parent属性（parent可以更方便画出树结构），查询通过left和right取值，一般情况可以通过一条sql查询和排序出整个需要的树节点。</p>
+<p><em>该算法在网络上有很多资源。</em></p>
+<blockquote>
+<ul>
+<li>查询某段树的节点数</li>
+<li>查询整树</li>
+<li>新增、删除节点</li>
+<li>比较常用的树结构——邻接表</li>
+</ul>
+</blockquote>
+<p>通过先序遍历算法，预置每个节点left、right后的树如下图所示：<em>图片转自网络</em><br><img src="http://7xsqqk.com2.z0.glb.clouddn.com/04174230_jKOK.png" alt="先序遍历"></p>
+<p>  1.查询某段树的节点数</p>
+<p><strong>(顶点right-顶点left+1)/2</strong></p>
+<p>例如图中B、C、D、E、F段树的节点数：(11-2+1)/2=5</p>
+<p>  2.查询整树</p>
+<p><strong>顶点left &lt;= left &amp;&amp; 顶点right &gt;= right</strong></p>
+<p>例如图中B、C、D、E、F树:<br><strong>select * from tree where right&gt;=2 and right&lt;=11 order by right</strong><br>然后根据level可以和父子关系可以很清晰的画出整个树。</p>
+<p>  3.新增、删除节点<br>如下图新增X节点：<em>图片转自网络</em><br><img src="http://7xsqqk.com2.z0.glb.clouddn.com/04174230_v8X4.png" alt="新增X节点"></p>
+<p>通过图可以看到，新增点位X左边的left和right都不变，右边所有节点都需要update。<br>更新公式：<br>X右边所有节点的<strong>left＋2、right＋2</strong>，<br>X节点由于没有子节点，所有<strong>left＝右边临界点right＋1、right＝自己的left＋1</strong></p>
+<p> 4.比较常用的树结构——邻接表<br>这种结构是现实中最常用而且最容易理解的，简单来讲就是每个节点标示一下自己的parent ，根据parent递归画出树结构，需要多次遍历。但是更新会更加方便。</p>
+<p>资料参考：<br><a href="http://m.oschina.net/blog/99604" target="_blank" rel="external">http://my.oschina.net/bootstrap/blog/166805</a></p>
+<p><a href="http://m.oschina.net/blog/99604" target="_blank" rel="external">http://m.oschina.net/blog/99604</a></p>
   
 	</div>
 		<footer class="article-footer clearfix">
@@ -103,7 +128,7 @@
 
 <div class="article-share" id="share">
 
-  <div data-url="http://mcdullfei.github.io/2016/05/13/转-性能优化模式/" data-title="转-性能优化模式 | Renfei&#39;s blog" data-tsina="1809365984" class="share clearfix">
+  <div data-url="http://mcdullfei.github.io/2016/05/26/预排序遍历树算法/" data-title="预排序遍历树算法 | Renfei&#39;s blog" data-tsina="1809365984" class="share clearfix">
   </div>
 
 </div>
@@ -112,19 +137,11 @@
 	
 <nav class="article-nav clearfix">
  
- <div class="prev" >
- <a href="/2016/05/26/预排序遍历树算法/" title="预排序遍历树算法">
-  <strong>PREVIOUS:</strong><br/>
-  <span>
-  预排序遍历树算法</span>
-</a>
-</div>
-
 
 <div class="next">
-<a href="/2016/02/12/hash算法/"  title="hash算法">
+<a href="/2016/05/13/转-性能优化模式/"  title="转-性能优化模式">
  <strong>NEXT:</strong><br/> 
- <span>hash算法
+ <span>转-性能优化模式
 </span>
 </a>
 </div>
@@ -141,7 +158,7 @@
 
   <div id="toc" class="toc-aside">
   <strong class="toc-title">文章目录</strong>
-  <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#性能优化模式"><span class="toc-number">1.</span> <span class="toc-text">性能优化模式</span></a></li></ol>
+  <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#预排序遍历树算法"><span class="toc-number">1.</span> <span class="toc-text">预排序遍历树算法</span></a></li></ol>
   </div>
 
 <div id="asidepart">
