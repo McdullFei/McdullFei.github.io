@@ -83,7 +83,7 @@
     </p>
   <p class="article-time">
     <time datetime="2016-05-26T06:34:47.000Z" itemprop="datePublished">2016-05-26</time>
-    更新日期:<time datetime="2016-05-26T07:32:51.000Z" itemprop="dateModified">2016-05-26</time>
+    更新日期:<time datetime="2016-05-28T03:17:26.000Z" itemprop="dateModified">2016-05-28</time>
     
   </p>
 </header>
@@ -115,9 +115,15 @@
 <p><strong>顶点left &lt;= left &amp;&amp; 顶点right &gt;= right</strong></p>
 <p>例如图中B、C、D、E、F树:<br><strong>select * from tree where right&gt;=2 and right&lt;=11 order by right</strong><br>然后根据level可以和父子关系可以很清晰的画出整个树。</p>
 <p>  3.新增、删除节点<br>如下图新增X节点：<em>图片转自网络</em><br><img src="http://7xsqqk.com2.z0.glb.clouddn.com/04174230_v8X4.png" alt="新增X节点"></p>
-<p>通过图可以看到，新增点位X左边的left和right都不变，右边所有节点都需要update。<br>更新公式：<br>X右边所有节点的<strong>left＋2、right＋2</strong>，<br>X节点由于没有子节点，所有<strong>left＝右边临界点right＋1、right＝自己的left＋1</strong></p>
+<p>通过图可以看到，新增点位X左边的left和right都不变，右边所有节点都需要update。<br>更新公式：<br>X右边所有节点的<strong>left＋2、right＋2</strong>，<br>X节点由于没有子节点，所有<strong>left＝左边临界点right＋1、right＝自己的left＋1</strong></p>
+<p>1 G节点的右参数为13</p>
+<p>2 变更所有的受影响的节点,给新节点腾出空位子</p>
+<p>所有左节点比G节点大的，都增加2</p>
+<p>update tree set lft=lft+2 where lft&gt;12</p>
+<p>所有右节点比G节点大的，都增加2</p>
+<p>update tree set rgt=rgt+2 where rgt&gt;13</p>
 <p> 4.比较常用的树结构——邻接表<br>这种结构是现实中最常用而且最容易理解的，简单来讲就是每个节点标示一下自己的parent ，根据parent递归画出树结构，需要多次遍历。但是更新会更加方便。</p>
-<p>资料参考：<br><a href="http://m.oschina.net/blog/99604" target="_blank" rel="external">http://my.oschina.net/bootstrap/blog/166805</a></p>
+<p>资料参考：<br><a href="http://my.oschina.net/bootstrap/blog/166805" target="_blank" rel="external">http://my.oschina.net/bootstrap/blog/166805</a></p>
 <p><a href="http://m.oschina.net/blog/99604" target="_blank" rel="external">http://m.oschina.net/blog/99604</a></p>
   
 	</div>
