@@ -83,7 +83,7 @@
     </p>
   <p class="article-time">
     <time datetime="2016-05-26T06:34:47.000Z" itemprop="datePublished">2016-05-26</time>
-    更新日期:<time datetime="2016-05-28T03:17:26.000Z" itemprop="dateModified">2016-05-28</time>
+    更新日期:<time datetime="2016-05-30T06:42:47.000Z" itemprop="dateModified">2016-05-30</time>
     
   </p>
 </header>
@@ -113,7 +113,7 @@
 <p>例如图中B、C、D、E、F段树的节点数：(11-2+1)/2=5</p>
 <p>  2.查询整树</p>
 <p><strong>顶点left &lt;= left &amp;&amp; 顶点right &gt;= right</strong></p>
-<p>例如图中B、C、D、E、F树:<br><strong>select * from tree where right&gt;=2 and right&lt;=11 order by right</strong><br>然后根据level可以和父子关系可以很清晰的画出整个树。</p>
+<p>例如图中B、C、D、E、F树:<br><strong>select * from tree where left&gt;=2 and right&lt;=11 order by left</strong><br>然后根据level可以和父子关系可以很清晰的画出整个树。</p>
 <p>  3.新增、删除节点<br>如下图新增X节点：<em>图片转自网络</em><br><img src="http://7xsqqk.com2.z0.glb.clouddn.com/04174230_v8X4.png" alt="新增X节点"></p>
 <p>通过图可以看到，新增点位X左边的left和right都不变，右边所有节点都需要update。<br>更新公式：<br>X右边所有节点的<strong>left＋2、right＋2</strong>，<br>X节点由于没有子节点，所有<strong>left＝左边临界点right＋1、right＝自己的left＋1</strong></p>
 <p>1 G节点的右参数为13</p>
